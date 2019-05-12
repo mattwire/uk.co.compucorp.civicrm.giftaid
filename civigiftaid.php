@@ -34,21 +34,21 @@ function civigiftaid_civicrm_install() {
   // rebuild the menu so our path is picked up
   require_once 'CRM/Core/Invoke.php';
   CRM_Core_Invoke::rebuildMenuAndCaches();
-  return _civigiftaid_civix_civicrm_install();
+  _civigiftaid_civix_civicrm_install();
 }
 
 /**
  * Implementation of hook_civicrm_uninstall
  */
 function civigiftaid_civicrm_uninstall() {
-  return _civigiftaid_civix_civicrm_uninstall();
+  _civigiftaid_civix_civicrm_uninstall();
 }
 
 /**
  * Implementation of hook_civicrm_enable
  */
 function civigiftaid_civicrm_enable() {
-  return _civigiftaid_civix_civicrm_enable();
+  _civigiftaid_civix_civicrm_enable();
 }
 
 /**
@@ -68,7 +68,7 @@ function civigiftaid_civicrm_disable() {
  *                for 'enqueue', returns void
  */
 function civigiftaid_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
-  return _civigiftaid_civix_civicrm_upgrade($op, $queue);
+  _civigiftaid_civix_civicrm_upgrade($op, $queue);
 }
 
 /**
@@ -78,7 +78,7 @@ function civigiftaid_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) {
  * is installed, disabled, uninstalled.
  */
 function civigiftaid_civicrm_managed(&$entities) {
-  return _civigiftaid_civix_civicrm_managed($entities);
+  _civigiftaid_civix_civicrm_managed($entities);
 }
 
 /**

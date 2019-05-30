@@ -24,9 +24,9 @@ class _ExtensionUtil {
    *   Translated text.
    * @see ts
    */
-  public static function ts($text, $params = []) {
+  public static function ts($text, $params = array()) {
     if (!array_key_exists('domain', $params)) {
-      $params['domain'] = [self::LONG_NAME, NULL];
+      $params['domain'] = array(self::LONG_NAME, NULL);
     }
     return ts($text, $params);
   }
@@ -100,7 +100,7 @@ function _civigiftaid_civix_civicrm_config(&$config = NULL) {
     array_unshift($template->template_dir, $extDir);
   }
   else {
-    $template->template_dir = [$extDir, $template->template_dir];
+    $template->template_dir = array($extDir, $template->template_dir);
   }
 
   $include_path = $extRoot . PATH_SEPARATOR . get_include_path();
@@ -140,7 +140,7 @@ function _civigiftaid_civix_civicrm_install() {
 function _civigiftaid_civix_civicrm_postInstall() {
   _civigiftaid_civix_civicrm_config();
   if ($upgrader = _civigiftaid_civix_upgrader()) {
-    if (is_callable([$upgrader, 'onPostInstall'])) {
+    if (is_callable(array($upgrader, 'onPostInstall'))) {
       $upgrader->onPostInstall();
     }
   }
@@ -166,7 +166,7 @@ function _civigiftaid_civix_civicrm_uninstall() {
 function _civigiftaid_civix_civicrm_enable() {
   _civigiftaid_civix_civicrm_config();
   if ($upgrader = _civigiftaid_civix_upgrader()) {
-    if (is_callable([$upgrader, 'onEnable'])) {
+    if (is_callable(array($upgrader, 'onEnable'))) {
       $upgrader->onEnable();
     }
   }
@@ -181,7 +181,7 @@ function _civigiftaid_civix_civicrm_enable() {
 function _civigiftaid_civix_civicrm_disable() {
   _civigiftaid_civix_civicrm_config();
   if ($upgrader = _civigiftaid_civix_upgrader()) {
-    if (is_callable([$upgrader, 'onDisable'])) {
+    if (is_callable(array($upgrader, 'onDisable'))) {
       $upgrader->onDisable();
     }
   }
@@ -227,12 +227,12 @@ function _civigiftaid_civix_upgrader() {
  * @return array(string)
  */
 function _civigiftaid_civix_find_files($dir, $pattern) {
-  if (is_callable(['CRM_Utils_File', 'findFiles'])) {
+  if (is_callable(array('CRM_Utils_File', 'findFiles'))) {
     return CRM_Utils_File::findFiles($dir, $pattern);
   }
 
-  $todos = [$dir];
-  $result = [];
+  $todos = array($dir);
+  $result = array();
   while (!empty($todos)) {
     $subdir = array_shift($todos);
     foreach (_civigiftaid_civix_glob("$subdir/$pattern") as $match) {
@@ -299,11 +299,11 @@ function _civigiftaid_civix_civicrm_caseTypes(&$caseTypes) {
       CRM_Core_Error::fatal($errorMessage);
       // throw new CRM_Core_Exception($errorMessage);
     }
-    $caseTypes[$name] = [
+    $caseTypes[$name] = array(
       'module' => E::LONG_NAME,
       'name' => $name,
       'file' => $file,
-    ];
+    );
   }
 }
 
@@ -346,7 +346,7 @@ function _civigiftaid_civix_civicrm_angularModules(&$angularModules) {
  */
 function _civigiftaid_civix_glob($pattern) {
   $result = glob($pattern);
-  return is_array($result) ? $result : [];
+  return is_array($result) ? $result : array();
 }
 
 /**
@@ -361,12 +361,12 @@ function _civigiftaid_civix_glob($pattern) {
 function _civigiftaid_civix_insert_navigation_menu(&$menu, $path, $item) {
   // If we are done going down the path, insert menu
   if (empty($path)) {
-    $menu[] = [
-      'attributes' => array_merge([
+    $menu[] = array(
+      'attributes' => array_merge(array(
         'label'      => CRM_Utils_Array::value('name', $item),
         'active'     => 1,
-      ], $item),
-    ];
+      ), $item),
+    );
     return TRUE;
   }
   else {
@@ -377,7 +377,7 @@ function _civigiftaid_civix_insert_navigation_menu(&$menu, $path, $item) {
     foreach ($menu as $key => &$entry) {
       if ($entry['attributes']['name'] == $first) {
         if (!isset($entry['child'])) {
-          $entry['child'] = [];
+          $entry['child'] = array();
         }
         $found = _civigiftaid_civix_insert_navigation_menu($entry['child'], implode('/', $path), $item, $key);
       }
@@ -390,7 +390,7 @@ function _civigiftaid_civix_insert_navigation_menu(&$menu, $path, $item) {
  * (Delegated) Implements hook_civicrm_navigationMenu().
  */
 function _civigiftaid_civix_navigationMenu(&$nodes) {
-  if (!is_callable(['CRM_Core_BAO_Navigation', 'fixNavigationMenu'])) {
+  if (!is_callable(array('CRM_Core_BAO_Navigation', 'fixNavigationMenu'))) {
     _civigiftaid_civix_fixNavigationMenu($nodes);
   }
 }
@@ -456,12 +456,12 @@ function _civigiftaid_civix_civicrm_alterSettingsFolders(&$metaDataFolders = NUL
  */
 
 function _civigiftaid_civix_civicrm_entityTypes(&$entityTypes) {
-  $entityTypes = array_merge($entityTypes, [
+  $entityTypes = array_merge($entityTypes, array (
     'CRM_Civigiftaid_DAO_BatchSettings' => 
-    [
+    array (
       'name' => 'BatchSettings',
       'class' => 'CRM_Civigiftaid_DAO_BatchSettings',
       'table' => 'civicrm_gift_aid_batch_settings',
-    ],
-  ]);
+    ),
+  ));
 }

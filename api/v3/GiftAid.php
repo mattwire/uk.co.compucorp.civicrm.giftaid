@@ -8,8 +8,8 @@ function civicrm_api3_gift_aid_makepastyearsubmissions($params) {
   $currentDeclarations = CRM_Civigiftaid_Utils_GiftAid::getCurrentDeclarations($contacts);
 
   // get current declarations which has "past 4 year" option
-  $currentWithPastYearOption = array();
-  $contactsIds = array();
+  $currentWithPastYearOption = [];
+  $contactsIds = [];
   foreach($currentDeclarations as $currentDeclaration) {
     if($currentDeclaration['eligible_for_gift_aid'] == 3){
       $currentWithPastYearOption[] = $currentDeclaration;

@@ -34,13 +34,13 @@ class CRM_Civigiftaid_Form_Admin extends CRM_Core_Form {
       'Enabled Financial Types',
       $this->getFinancialTypes(),
       FALSE,
-      array('multiple' => TRUE)
+      ['multiple' => TRUE]
     );
 
-    $this->addButtons(array(
-      array('type' => 'submit', 'name' => ts('Save'), 'isDefault' => TRUE),
-      array('type' => 'cancel', 'name' => ts('Cancel')),
-    ));
+    $this->addButtons([
+      ['type' => 'submit', 'name' => ts('Save'), 'isDefault' => TRUE],
+      ['type' => 'cancel', 'name' => ts('Cancel')],
+    ]);
 
     $this->assign('elementNames', $this->getRenderableElementNames());
 
@@ -87,7 +87,7 @@ class CRM_Civigiftaid_Form_Admin extends CRM_Core_Form {
     // auto-rendered in the loop -- such as "qfKey" and "buttons".  These
     // items don't have labels.  We'll identify renderable by filtering on
     // the 'label'.
-    $elementNames = array();
+    $elementNames = [];
     foreach ($this->_elements as $element) {
       /** @var HTML_QuickForm_Element $element */
       $label = $element->getLabel();
@@ -147,14 +147,14 @@ class CRM_Civigiftaid_Form_Admin extends CRM_Core_Form {
    */
   private function getFinancialTypes() {
     $result = civicrm_api3('FinancialType', 'get', 
-      array(
+      [
         'sequential' => 1,
         'is_active' => 1,
-        'options' => array('limit' => 0),
-      )
+        'options' => ['limit' => 0],
+      ]
     );
 
-    $types = array();
+    $types = [];
     foreach ($result['values'] as $type) {
       $types[$type['id']] = $type['name'];
     }

@@ -62,7 +62,7 @@ class CRM_Civigiftaid_Upgrader_Base {
     $instance->ctx = array_shift($args);
     $instance->queue = $instance->ctx->queue;
     $method = array_shift($args);
-    return call_user_func_array(array($instance, $method), $args);
+    return call_user_func_array([$instance, $method], $args);
   }
 
   public function __construct($extensionName, $extensionDir) {
@@ -117,7 +117,7 @@ class CRM_Civigiftaid_Upgrader_Base {
    * provides syntatic sugar for queueing several tasks that
    * run different queries
    */
-  public function executeSql($query, $params = array()) {
+  public function executeSql($query, $params = []) {
     // FIXME verify that we raise an exception on error
     CRM_Core_DAO::executeSql($query, $params);
     return TRUE;
@@ -135,11 +135,11 @@ class CRM_Civigiftaid_Upgrader_Base {
     $args = func_get_args();
     $title = array_shift($args);
     $task = new CRM_Queue_Task(
-      array(get_class($this), '_queueAdapter'),
+      [get_class($this), '_queueAdapter'],
       $args,
       $title
     );
-    return $this->queue->createItem($task, array('weight' => -1));
+    return $this->queue->createItem($task, ['weight' => -1]);
   }
 
   // ******** Revision-tracking helpers ********
@@ -172,23 +172,23 @@ class CRM_Civigiftaid_Upgrader_Base {
     $currentRevision = $this->getCurrentRevision();
     foreach ($this->getRevisions() as $revision) {
       if ($revision > $currentRevision) {
-        $title = ts('Upgrade %1 to revision %2', array(
+        $title = ts('Upgrade %1 to revision %2', [
           1 => $this->extensionName,
           2 => $revision,
-        ));
+        ]);
 
         // note: don't use addTask() because it sets weight=-1
 
         $task = new CRM_Queue_Task(
-          array(get_class($this), '_queueAdapter'),
-          array('upgrade_' . $revision),
+          [get_class($this), '_queueAdapter'],
+          ['upgrade_' . $revision],
           $title
         );
         $this->queue->createItem($task);
 
         $task = new CRM_Queue_Task(
-          array(get_class($this), '_queueAdapter'),
-          array('setCurrentRevision', $revision),
+          [get_class($this), '_queueAdapter'],
+          ['setCurrentRevision', $revision],
           $title
         );
         $this->queue->createItem($task);
@@ -203,7 +203,7 @@ class CRM_Civigiftaid_Upgrader_Base {
    */
   public function getRevisions() {
     if (! is_array($this->revisions)) {
-      $this->revisions = array();
+      $this->revisions = [];
 
       $clazz = new ReflectionClass(get_class($this));
       $methods = $clazz->getMethods();
@@ -250,7 +250,7 @@ class CRM_Civigiftaid_Upgrader_Base {
         $this->executeCustomDataFileByAbsPath($file);
       }
     }
-    if (is_callable(array($this, 'install'))) {
+    if (is_callable([$this, 'install'])) {
       $this->install();
     }
     $revisions = $this->getRevisions();
@@ -260,7 +260,7 @@ class CRM_Civigiftaid_Upgrader_Base {
   }
 
   public function onUninstall() {
-    if (is_callable(array($this, 'uninstall'))) {
+    if (is_callable([$this, 'uninstall'])) {
       $this->uninstall();
     }
     $files = glob($this->extensionDir . '/sql/*_uninstall.sql');
@@ -274,14 +274,14 @@ class CRM_Civigiftaid_Upgrader_Base {
 
   public function onEnable() {
     // stub for possible future use
-    if (is_callable(array($this, 'enable'))) {
+    if (is_callable([$this, 'enable'])) {
       $this->enable();
     }
   }
 
   public function onDisable() {
     // stub for possible future use
-    if (is_callable(array($this, 'disable'))) {
+    if (is_callable([$this, 'disable'])) {
       $this->disable();
     }
   }
@@ -289,7 +289,7 @@ class CRM_Civigiftaid_Upgrader_Base {
   public function onUpgrade($op, CRM_Queue_Queue $queue = NULL) {
     switch($op) {
       case 'check':
-        return array($this->hasPendingRevisions());
+        return [$this->hasPendingRevisions()];
       case 'enqueue':
         return $this->enqueuePendingRevisions($queue);
       default:

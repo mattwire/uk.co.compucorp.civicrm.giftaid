@@ -109,14 +109,14 @@ class CRM_Civigiftaid_Form_Task_RemoveFromBatch extends CRM_Contribute_Form_Task
         $status = ts('Could not removed contribution from batch, as there were no valid contribution(s) to be removed.');
       } else {
         $transaction->commit( );
-        $status = ts('Total Selected Contribution(s): %1', array(1 => $total));
+        $status = ts('Total Selected Contribution(s): %1', [1 => $total]);
         CRM_Core_Session::setStatus( $status );
 
         if ( $removed ) {
-          $status = ts('Total Contribution(s) removed from batch: %1', array(1 => $removed));
+          $status = ts('Total Contribution(s) removed from batch: %1', [1 => $removed]);
         }
         if ( $notRemoved ) {
-          $status = ts('Total Contribution(s) not removed from batch: %1', array(1 => $notRemoved));
+          $status = ts('Total Contribution(s) not removed from batch: %1', [1 => $notRemoved]);
         }
 
      }

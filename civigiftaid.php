@@ -87,16 +87,16 @@ function civigiftaid_civicrm_managed(&$entities) {
  */
 function civigiftaid_civicrm_searchTasks($objectType, &$tasks) {
   if ($objectType == 'contribution') {
-    $tasks[CIVICRM_GIFTAID_ADD_TASKID] = array(
+    $tasks[CIVICRM_GIFTAID_ADD_TASKID] = [
       'title'  => ts('Add to Gift Aid batch'),
       'class'  => 'CRM_Civigiftaid_Form_Task_AddToBatch',
       'result' => FALSE
-    );
-    $tasks[CIVICRM_GIFTAID_REMOVE_TASKID] = array(
+    ];
+    $tasks[CIVICRM_GIFTAID_REMOVE_TASKID] = [
       'title'  => ts('Remove from Gift Aid batch'),
       'class'  => 'CRM_Civigiftaid_Form_Task_RemoveFromBatch',
       'result' => FALSE
-    );
+    ];
   }
 }
 
@@ -125,7 +125,7 @@ function civigiftaid_civicrm_postProcess($formName, &$form) {
       SELECT MAX(id) FROM civicrm_value_gift_aid_declaration
       WHERE entity_id = %1";
 
-    $params = array(1 => array($contactId, 'Integer'));
+    $params = [1 => [$contactId, 'Integer']];
     $rowId = CRM_Core_DAO::singleValueQuery($sql, $params);
 
     // Get the home address of the contact
@@ -142,11 +142,11 @@ function civigiftaid_civicrm_postProcess($formName, &$form) {
 
     CRM_Core_DAO::executeQuery(
       $sql,
-      array(
-        1 => array($addressDetails, 'String'),
-        2 => array($postCode, 'String'),
-        3 => array($rowId, 'Integer'),
-      )
+      [
+        1 => [$addressDetails, 'String'],
+        2 => [$postCode, 'String'],
+        3 => [$rowId, 'Integer'],
+      ]
     );
   }
 }
@@ -194,7 +194,7 @@ function civigiftaid_civicrm_custom($op, $groupID, $entityID, &$params) {
 
     $dao = CRM_Core_DAO::executeQuery(
       $sql,
-      array(1 => array($entityID, 'Integer'))
+      [1 => [$entityID, 'Integer']]
     );
 
     if ($dao->fetch()) {
@@ -208,13 +208,13 @@ function civigiftaid_civicrm_custom($op, $groupID, $entityID, &$params) {
         1
       );
 
-      $params = array(
+      $params = [
         'entity_id'             => $contactID,
         'eligible_for_gift_aid' => $newStatus,
         'start_date'            => $contributionDate,
         'address'               => $addressDetails,
         'post_code'             => $postCode,
-      );
+      ];
       CRM_Civigiftaid_Utils_GiftAid::setDeclaration($params);
       if ($newStatus == CRM_Civigiftaid_Utils_GiftAid::DECLARATION_IS_PAST_4_YEARS || $newStatus == CRM_Civigiftaid_Utils_GiftAid::DECLARATION_IS_YES) {
         CRM_Civigiftaid_Utils_Contribution::updateGiftAidFields($entityID);
@@ -231,7 +231,7 @@ function civigiftaid_civicrm_custom($op, $groupID, $entityID, &$params) {
  * - check for overlaps between declarations.
  */
 function civigiftaid_civicrm_validate($formName, &$fields, &$files, &$form) {
-  $errors = array();
+  $errors = [];
 
   if ($formName == 'CRM_Contact_Form_CustomData') {
     $groupID = $form->getVar('_groupID');
@@ -255,15 +255,15 @@ function civigiftaid_civicrm_validate($formName, &$fields, &$files, &$form) {
 
       $dao = CRM_Core_DAO::executeQuery(
         $sql,
-        array(1 => array($groupID, 'Integer'))
+        [1 => [$groupID, 'Integer']]
       );
 
-      $columnNames = array();
+      $columnNames = [];
       while ($dao->fetch()) {
         $columnNames[$dao->id] = $dao->column_name;
       }
 
-      $declarations = array();
+      $declarations = [];
       foreach ($fields as $name => $value) {
         if (preg_match('/^custom_(\d+)_(-?\d+)$/', $name, $matches)) {
           $columnName = CRM_Utils_Array::value($matches[1], $columnNames);
@@ -343,11 +343,11 @@ function civigiftaid_civicrm_validate($formName, &$fields, &$files, &$form) {
         $address = civicrm_api(
           "Address",
           "get",
-          array(
+          [
             'version'          => '3',
             'contact_id'       => $contactID,
             'location_type_id' => 1
-          )
+          ]
         );
         if ($address['count'] == 0) {
           $errors[$values3['eligible_for_gift_aid']['name']] =
@@ -385,7 +385,7 @@ function civigiftaid_civicrm_navigationMenu(&$params) {
   $result = civicrm_api(
     'OptionValue',
     'getsingle',
-    array('version' => 3, 'name' => 'basic_rate_tax')
+    ['version' => 3, 'name' => 'basic_rate_tax']
   );
 
   if ($result['id']) {
@@ -406,8 +406,8 @@ function civigiftaid_civicrm_navigationMenu(&$params) {
     // get the maximum key under administer menu
     $maxAdminMenuKey = max(array_keys($params[$administerMenuId]['child']));
     $nextAdminMenuKey = $maxAdminMenuKey + 1;
-    $params[$administerMenuId]['child'][$nextAdminMenuKey] = array(
-      'attributes' => array(
+    $params[$administerMenuId]['child'][$nextAdminMenuKey] = [
+      'attributes' => [
         'label'      => ts('CiviGiftAid'),
         'name'       => 'admin_giftaid',
         'permission' => NULL,
@@ -416,10 +416,10 @@ function civigiftaid_civicrm_navigationMenu(&$params) {
         'parentID'   => $administerMenuId,
         'navID'      => $nextAdminMenuKey,
         'active'     => 1
-      ),
-      'child'      => array(
-        1 => array(
-          'attributes' => array(
+      ],
+      'child'      => [
+        1 => [
+          'attributes' => [
             'label'      => ts('GiftAid Basic Rate Tax'),
             'name'       => 'giftaid_basic_rate_tax',
             'url'        => "civicrm/admin/options?action=update&id=$ovId&gid=$ogId&reset=1",
@@ -429,11 +429,11 @@ function civigiftaid_civicrm_navigationMenu(&$params) {
             'parentID'   => $nextAdminMenuKey,
             'navID'      => 2,
             'active'     => 1
-          ),
+          ],
           'child'      => NULL
-        ),
-        2 => array(
-          'attributes' => array(
+        ],
+        2 => [
+          'attributes' => [
             'label'      => ts('Settings'),
             'name'       => 'settings',
             'url'        => "civicrm/admin/gift-aid",
@@ -443,11 +443,11 @@ function civigiftaid_civicrm_navigationMenu(&$params) {
             'parentID'   => $nextAdminMenuKey,
             'navID'      => 3,
             'active'     => 1
-          ),
+          ],
           'child'      => NULL
-        ),
-      )
-    );
+        ],
+      ]
+    ];
   }
 }
 
@@ -461,10 +461,10 @@ function _civigiftaid_civicrm_custom_get_address_and_postal_code($contactId, $lo
   }
 
   // get Address & Postal Code of the contact
-  $address = civicrm_api3("Address", "get", array(
+  $address = civicrm_api3("Address", "get", [
     'contact_id'       => $contactId,
     'location_type_id' => $location_type_id
-  ));
+  ]);
   if ($address['count'] > 0) {
     if (!isset($address['id'])) { //check if the contact has more than one home address so use the first one
       $addressValue = array_shift(array_values($address['values']));
@@ -479,7 +479,7 @@ function _civigiftaid_civicrm_custom_get_address_and_postal_code($contactId, $lo
 
   }
 
-  return array($fullFormattedAddress, $postalCode);
+  return [$fullFormattedAddress, $postalCode];
 }
 
 /**
@@ -491,7 +491,7 @@ function _civigiftaid_civicrm_custom_get_address_and_postal_code_format_address(
   if (!is_array($contactAddress)) {
     return 'NULL';
   }
-  $tempAddressArray = array();
+  $tempAddressArray = [];
   if (isset($contactAddress['address_name'])
     AND $contactAddress['address_name']
   ) {

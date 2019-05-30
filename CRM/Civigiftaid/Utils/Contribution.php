@@ -55,8 +55,8 @@ class CRM_Civigiftaid_Utils_Contribution {
    */
   public static function addContributionToBatch($contributionIDs, $batchID) {
     $date = date('YmdHis');
-    $contributionsAdded = array();
-    $contributionsNotAdded = array();
+    $contributionsAdded = [];
+    $contributionsNotAdded = [];
 
     require_once "CRM/Civigiftaid/Utils/GiftAid.php";
     require_once "CRM/Contribute/BAO/Contribution.php";
@@ -75,17 +75,17 @@ class CRM_Civigiftaid_Utils_Contribution {
     $batchNameGroup = civicrm_api(
       'OptionGroup',
       'getsingle',
-      array('version' => 3, 'sequential' => 1, 'name' => 'giftaid_batch_name')
+      ['version' => 3, 'sequential' => 1, 'name' => 'giftaid_batch_name']
     );
     if ($batchNameGroup['id']) {
       $groupId = $batchNameGroup['id'];
-      $params = array(
+      $params = [
         'version'         => 3,
         'sequential'      => 1,
         'option_group_id' => $groupId,
         'value'           => $batchName,
         'label'           => $batchName
-      );
+      ];
       $result = civicrm_api('OptionValue', 'create', $params);
     }
 
@@ -110,7 +110,7 @@ class CRM_Civigiftaid_Utils_Contribution {
 
       // get additional info
       // get contribution details from Contribution using contribution id
-      $params = array('id' => $contributionID);
+      $params = ['id' => $contributionID];
       CRM_Contribute_BAO_Contribution::retrieve($params, $contribution, $ids);
       $contactId = $contribution['contact_id'];
 
@@ -142,11 +142,11 @@ class CRM_Civigiftaid_Utils_Contribution {
       );
     }
 
-    return array(
+    return [
       count($contributionIDs),
       count($contributionsAdded),
       count($contributionsNotAdded)
-    );
+    ];
   }
 
   public static function updateGiftAidFields($contributionID, $batchName = '') {
@@ -181,8 +181,8 @@ class CRM_Civigiftaid_Utils_Contribution {
   }
 
   public static function removeContributionFromBatch($contributionIDs) {
-    $contributionRemoved = array();
-    $contributionNotRemoved = array();
+    $contributionRemoved = [];
+    $contributionNotRemoved = [];
 
     list($total, $contributionsToRemove, $notInBatch, $alreadySubmited) =
       self::validationRemoveContributionFromBatch($contributionIDs);
@@ -207,9 +207,9 @@ class CRM_Civigiftaid_Utils_Contribution {
                           batch_name = NULL
                       WHERE entity_id = %1";
 
-          $sqlParams = array(
-            1 => array($contribution['contribution_id'], 'Integer')
-          );
+          $sqlParams = [
+            1 => [$contribution['contribution_id'], 'Integer']
+          ];
           CRM_Core_DAO::executeQuery($query, $sqlParams);
 
           array_push($contributionRemoved, $contribution['contribution_id']);
@@ -221,11 +221,11 @@ class CRM_Civigiftaid_Utils_Contribution {
       }
     }
 
-    return array(
+    return [
       count($contributionIDs),
       count($contributionRemoved),
       count($contributionNotRemoved)
-    );
+    ];
   }
 
   /**
@@ -294,16 +294,16 @@ class CRM_Civigiftaid_Utils_Contribution {
     $gResult = civicrm_api(
       'OptionGroup',
       'getsingle',
-      array('version' => 3, 'name' => 'giftaid_basic_rate_tax')
+      ['version' => 3, 'name' => 'giftaid_basic_rate_tax']
     );
 
     if ($gResult['id']) {
-      $params = array(
+      $params = [
         'version'         => 3,
         'sequential'      => 1,
         'option_group_id' => $gResult['id'],
         'name'            => 'basic_rate_tax',
-      );
+      ];
 
       $result = civicrm_api('OptionValue', 'get', $params);
 
@@ -344,9 +344,9 @@ class CRM_Civigiftaid_Utils_Contribution {
    * @return array
    */
   public static function validationRemoveContributionFromBatch(&$contributionIDs) {
-    $contributionsAlreadySubmited = array();
-    $contributionsNotInBatch = array();
-    $contributionsToRemove = array();
+    $contributionsAlreadySubmited = [];
+    $contributionsNotInBatch = [];
+    $contributionsToRemove = [];
 
     foreach ($contributionIDs as $contributionID) {
 
@@ -374,12 +374,12 @@ class CRM_Civigiftaid_Utils_Contribution {
       }
     }
 
-    return array(
+    return [
       count($contributionIDs),
       $contributionsToRemove,
       $contributionsNotInBatch,
       $contributionsAlreadySubmited
-    );
+    ];
   }
 
   /**
@@ -392,9 +392,9 @@ class CRM_Civigiftaid_Utils_Contribution {
    * @return array
    */
   public static function validateContributionToBatch(&$contributionIDs) {
-    $contributionsAdded = array();
-    $contributionsAlreadyAdded = array();
-    $contributionsNotValid = array();
+    $contributionsAdded = [];
+    $contributionsAlreadyAdded = [];
+    $contributionsNotValid = [];
 
     require_once "CRM/Civigiftaid/Utils/GiftAid.php";
     //require_once "CRM/Core/DAO/EntityBatch.php";
@@ -410,7 +410,7 @@ class CRM_Civigiftaid_Utils_Contribution {
       // if not, increment $numContributionsAdded else keep the count of contributions that are already added
       if (!$batchContribution->find(TRUE)) {
         // get contact_id, & contribution receive date from Contribution using contribution id
-        $params = array('id' => $contributionID);
+        $params = ['id' => $contributionID];
         CRM_Contribute_BAO_Contribution::retrieve($params, $defaults, $ids);
 
         // check if contribution is not valid for gift aid, increment $numContributionsNotValid
@@ -430,12 +430,12 @@ class CRM_Civigiftaid_Utils_Contribution {
       }
     }
 
-    return array(
+    return [
       count($contributionIDs),
       $contributionsAdded,
       $contributionsAlreadyAdded,
       $contributionsNotValid
-    );
+    ];
   }
 
   /*
@@ -445,7 +445,7 @@ class CRM_Civigiftaid_Utils_Contribution {
     $query = "SELECT * FROM civicrm_batch ORDER BY " . $orderBy;
     $dao = CRM_Core_DAO::executeQuery($query);
 
-    $result = array();
+    $result = [];
     while ($dao->fetch()) {
       $result[$dao->id] = $dao->id . " - " . $dao->title;
     }
@@ -458,7 +458,7 @@ class CRM_Civigiftaid_Utils_Contribution {
    * @return array $result an array of contributions
    */
   public static function getContributionDetails($contributionIds) {
-    $result = array();
+    $result = [];
 
     if (empty($contributionIds)) {
       return $result;
@@ -592,7 +592,7 @@ class CRM_Civigiftaid_Utils_Contribution {
       if (isset($result[$dao->id])) {
         $item = static::getLineItemName($dao->entity_table);
 
-        $lineItem = array(
+        $lineItem = [
           'item'           => $item,
           'description'    => $dao->label,
           'financial_type' => $dao->name,
@@ -600,7 +600,7 @@ class CRM_Civigiftaid_Utils_Contribution {
             $dao->line_total, $dao->currency
           ),
           'qty'            => (int) $dao->qty,
-        );
+        ];
         $result[$dao->id]['line_items'][] = $lineItem;
       }
     }

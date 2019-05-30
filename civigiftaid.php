@@ -129,7 +129,7 @@ function civigiftaid_civicrm_postProcess($formName, &$form) {
     $rowId = CRM_Core_DAO::singleValueQuery($sql, $params);
 
     // Get the home address of the contact
-    $addressDetails = _civigiftaid_civicrm_custom_get_address_and_postal_code(
+    list($addressDetails, $postCode) = _civigiftaid_civicrm_custom_get_address_and_postal_code(
       $contactId,
       1
     );
@@ -140,11 +140,11 @@ function civigiftaid_civicrm_postProcess($formName, &$form) {
       post_code = %2
       WHERE  id = %3";
 
-    $dao = CRM_Core_DAO::executeQuery(
+    CRM_Core_DAO::executeQuery(
       $sql,
       array(
-        1 => array($addressDetails[0], 'String'),
-        2 => array($addressDetails[1], 'String'),
+        1 => array($addressDetails, 'String'),
+        2 => array($postCode, 'String'),
         3 => array($rowId, 'Integer'),
       )
     );
@@ -157,16 +157,10 @@ function civigiftaid_civicrm_postProcess($formName, &$form) {
  * "Eligible for Gift Aid" field on Contribution is updated.
  */
 function civigiftaid_civicrm_custom($op, $groupID, $entityID, &$params) {
-  if ($op != 'create' /* TODO && $op != 'edit' */) {
+  if ($op != 'create' && $op != 'edit') {
     return;
   }
 
-  //Do this only for online contributions
-  if ($_GET['q'] != 'civicrm/contribute/transact' OR empty($_GET['q'])) {
-    return;
-  }
-
-  require_once 'CRM/Core/DAO.php';
   $tableName = CRM_Core_DAO::getFieldValue(
     'CRM_Core_DAO_CustomGroup',
     $groupID,
@@ -209,20 +203,22 @@ function civigiftaid_civicrm_custom($op, $groupID, $entityID, &$params) {
     }
 
     if ($contactID) {
-      $addressDetails = _civigiftaid_civicrm_custom_get_address_and_postal_code(
+      list($addressDetails, $postCode) = _civigiftaid_civicrm_custom_get_address_and_postal_code(
         $contactID,
         1
       );
 
-      require_once 'CRM/Civigiftaid/Utils/GiftAid.php';
       $params = array(
         'entity_id'             => $contactID,
         'eligible_for_gift_aid' => $newStatus,
         'start_date'            => $contributionDate,
-        'address'               => $addressDetails[0],
-        'post_code'             => $addressDetails[1],
+        'address'               => $addressDetails,
+        'post_code'             => $postCode,
       );
       CRM_Civigiftaid_Utils_GiftAid::setDeclaration($params);
+      if ($newStatus == CRM_Civigiftaid_Utils_GiftAid::DECLARATION_IS_PAST_4_YEARS || $newStatus == CRM_Civigiftaid_Utils_GiftAid::DECLARATION_IS_YES) {
+        CRM_Civigiftaid_Utils_Contribution::updateGiftAidFields($entityID);
+      }
     }
   }
 }
@@ -458,39 +454,32 @@ function civigiftaid_civicrm_navigationMenu(&$params) {
 /**
  * Function to get full address and postal code for a contact
  */
-function _civigiftaid_civicrm_custom_get_address_and_postal_code(
-  $contactId,
-  $location_type_id = 1
-) {
+function _civigiftaid_civicrm_custom_get_address_and_postal_code($contactId, $location_type_id = 1) {
   if (empty($contactId)) {
-    return;
+    // @fixme Maybe this should throw an exception as it's unclear what happens if we don't have a contact ID here
+    return ['', ''];
   }
 
-  $fullFormatedAddress = 'NULL';
-  $postalCode = 'NULL';
   // get Address & Postal Code of the contact
-  require_once 'api/api.php';
-  require_once 'CRM/Utils/Address.php';
-  $address = civicrm_api("Address", "get", array(
-    'version'          => '3',
+  $address = civicrm_api3("Address", "get", array(
     'contact_id'       => $contactId,
     'location_type_id' => $location_type_id
   ));
   if ($address['count'] > 0) {
     if (!isset($address['id'])) { //check if the contact has more than one home address so use the first one
       $addressValue = array_shift(array_values($address['values']));
-      $postalCode = $addressValue['postal_code'];
+      $postalCode = CRM_Utils_Array::value('postal_code', $addressValue, '');
     }
     else {
       $addressValue = $address['values'][$address['id']];
-      $postalCode = $address['values'][$address['id']]['postal_code'];
+      $postalCode = CRM_Utils_Array::value('postal_code', $address['values'][$address['id']], '');
     }
-    $fullFormatedAddress =
+    $fullFormattedAddress =
       _civigiftaid_civicrm_custom_get_address_and_postal_code_format_address($addressValue);
 
   }
 
-  return array($fullFormatedAddress, $postalCode);
+  return array($fullFormattedAddress, $postalCode);
 }
 
 /**
@@ -526,7 +515,6 @@ function _civigiftaid_civicrm_custom_get_address_and_postal_code_format_address(
   if (isset($contactAddress['city']) AND $contactAddress['city']) {
     $tempAddressArray[] = $contactAddress['city'];
   }
-  require_once 'CRM/Core/PseudoConstant.php';
   if (isset($contactAddress['state_province_id'])
     AND $contactAddress['state_province_id']
   ) {

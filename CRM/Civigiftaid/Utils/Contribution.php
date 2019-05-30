@@ -124,31 +124,7 @@ class CRM_Civigiftaid_Utils_Contribution {
         $batchContribution->batch_id = $batchID;
         $batchContribution->save();
 
-        $giftAidableContribAmt = self::getGiftAidableContribAmt(
-          $contribution['total_amount'], $contributionID
-        );
-
-        // get gift aid amount
-        $giftAidAmount = static::calculateGiftAidAmt($giftAidableContribAmt, static::getBasicRateTax());
-
-        // FIXME: check if there is customTable method
-        $query = "
-                          INSERT INTO civicrm_value_gift_aid_submission
-                          (entity_id, eligible_for_gift_aid, gift_aid_amount , amount , batch_name)
-                          VALUES
-                            ( %1, 1, %2, %3 , %4 )
-                          ON DUPLICATE KEY UPDATE
-                          gift_aid_amount = %2 ,
-                          amount = %3 ,
-                          batch_name = %4
-                          ";
-        $sqlParams = array(
-          1 => array($contributionID, 'Integer'),
-          2 => array($giftAidAmount, 'Money'),
-          3 => array($contribution['total_amount'], 'Money'),
-          4 => array($batchName, 'String'),
-        );
-        CRM_Core_DAO::executeQuery($query, $sqlParams);
+        self::updateGiftAidFields($contributionID, $batchName);
 
         $contributionsAdded[] = $contributionID;
       }
@@ -171,6 +147,37 @@ class CRM_Civigiftaid_Utils_Contribution {
       count($contributionsAdded),
       count($contributionsNotAdded)
     );
+  }
+
+  public static function updateGiftAidFields($contributionID, $batchName = '') {
+    $totalAmount = civicrm_api3('Contribution', 'getvalue', [
+      'return' => "total_amount",
+      'id' => $contributionID,
+    ]);
+    $giftAidableContribAmt = self::getGiftAidableContribAmt(
+      $totalAmount, $contributionID
+    );
+
+    $giftAidAmount = self::calculateGiftAidAmt($giftAidableContribAmt, self::getBasicRateTax());
+
+    // FIXME: check if there is customTable method
+    $query = "
+                          INSERT INTO civicrm_value_gift_aid_submission
+                          (entity_id, eligible_for_gift_aid, gift_aid_amount , amount , batch_name)
+                          VALUES
+                            ( %1, 1, %2, %3 , %4 )
+                          ON DUPLICATE KEY UPDATE
+                          gift_aid_amount = %2 ,
+                          amount = %3 ,
+                          batch_name = %4
+                          ";
+    $sqlParams = [
+      1 => [$contributionID, 'Integer'],
+      2 => [$giftAidAmount, 'Money'],
+      3 => [$totalAmount, 'Money'],
+      4 => [$batchName, 'String'],
+    ];
+    CRM_Core_DAO::executeQuery($query, $sqlParams);
   }
 
   public static function removeContributionFromBatch($contributionIDs) {

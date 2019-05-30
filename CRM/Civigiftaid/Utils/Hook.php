@@ -2,9 +2,9 @@
 
 /*
  +--------------------------------------------------------------------+
- | CiviCRM version 4.3                                                |
+ | CiviCRM version 5.0                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2011                                |
+ | Copyright CiviCRM LLC (c) 2004-2019                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -34,52 +34,26 @@
  *
  */
 
-abstract class CRM_Civigiftaid_Utils_Hook {
+abstract class CRM_Civigiftaid_Utils_Hook extends CRM_Utils_Hook {
 
-	static $_nullObject = null;
+  /**
+   * This hook allows filtering contributions for gift-aid
+   * @param bool    $isEligible eligibilty already detected if getDeclaration() method.
+   * @param integer $contactID  contact being checked
+   * @param date    $date  date gift-aid declaration was made on
+   * @param $contributionID  contribution id if any being referred
+   *
+   * @return mixed
+   */
+  public static function giftAidEligible(&$isEligible, $contactID, $date = null, $contributionID = null) {
+    return self::singleton()->invoke(4, $isEligible, $contactID, $date, $contributionID, self::$_nullObject, self::$_nullObject, 'civicrm_giftAidEligible');
+  }
 
-    /**
-     * We only need one instance of this object. So we use the singleton
-     * pattern and cache the instance in this variable
-     *
-     * @var object
-     * @static
-     */
-    static private $_singleton = null;
-
-
-    /**
-     * Constructor and getter for the singleton instance
-     * @return instance of $config->userHookClass
-     */
-    static function singleton( ) {
-        if (self::$_singleton == null) {
-            $config = CRM_Core_Config::singleton( );
-            $class = $config->userHookClass;
-            require_once( str_replace( '_', DIRECTORY_SEPARATOR, $config->userHookClass ) . '.php' );
-            self::$_singleton = new $class();
-        }
-        return self::$_singleton;
-    }
-
-    /**
-     * This hook allows filtering contributions for gift-aid
-     * @param bool    $isEligible eligibilty already detected if getDeclaration() method.
-     * @param integer $contactID  contact being checked
-     * @param date    $date  date gift-aid declaration was made on
-     * @param $contributionID  contribution id if any being referred
-     *
-     * @access public
-     */
-    static function giftAidEligible( &$isEligible, $contactID, $date = null, $contributionID = null ) {
-		return self::versionSwitcher(4, $isEligible, $contactID, $date, $contributionID, self::$_nullObject, 'civicrm_giftAidEligible' );
-    }
-
-    /**
-     * This hook allows doing any extra processing for contributions that are added to a batch.
-     *
-     * @access public
-     */
+  /**
+   * This hook allows doing any extra processing for contributions that are added to a batch.
+   *
+   * @access public
+   */
 
   /**
    * This hook allows doing any extra processing for contributions that are added to a batch.
@@ -89,34 +63,20 @@ abstract class CRM_Civigiftaid_Utils_Hook {
    *
    * @return mixed
    */
-    static function batchContributions( $batchID, $contributionsAdded ) {
-		return self::versionSwitcher( 2, $batchID, $contributionsAdded, self::$_nullObject, self::$_nullObject, self::$_nullObject, 'civicrm_batchContributions' );
-    }
+  public static function batchContributions( $batchID, $contributionsAdded ) {
+    return self::singleton()->invoke(2, $batchID, $contributionsAdded, self::$_nullObject, self::$_nullObject, self::$_nullObject, self::$_nullObject, 'civicrm_batchContributions');
+  }
 
-    /**
-     * This hook allows altering getDeclaration() query
-     * @param string $query  declaration query
-     * @param array  $queryParams  params required by query
-     *
-     * @access public
-     */
-    static function alterDeclarationQuery( &$query, &$queryParams ) {
-		return self::versionSwitcher( 2, $query, $queryParams, self::$_nullObject, self::$_nullObject, self::$_nullObject, 'civicrm_alterDeclarationQuery' );
-    }
+  /**
+   * This hook allows altering getDeclaration() query
+   * @param string $query  declaration query
+   * @param array  $queryParams  params required by query
+   *
+   * @return mixed
+   *
+   */
+  public static function alterDeclarationQuery( &$query, &$queryParams ) {
+    return self::singleton()->invoke(2, $query, $queryParams, self::$_nullObject, self::$_nullObject, self::$_nullObject, self::$_nullObject, 'civicrm_alterDeclarationQuery');
+  }
 
-    /*
-     *
-     */
-    static function versionSwitcher($numParams, &$arg1, &$arg2, &$arg3, &$arg4, &$arg6, $fnSuffix, &$arg5 = NULL){
-      $version = CRM_Utils_System::version();
-      preg_match('/[0-9]\.[0-9]\.[0-9]/', $version, $matches);
-      $versionNum = str_replace(".","",array_pop($matches));
-      if ($versionNum >= 450){
-        return self::singleton()->invoke($numParams, $arg1, $arg2, $arg3, $arg4, $arg5, $arg6, $fnSuffix);
-      }
-      else {
-        return self::singleton()->invoke($numParams, $arg1, $arg2, $arg3, $arg4, $arg6, $fnSuffix);
-      }
-
-    }
 }

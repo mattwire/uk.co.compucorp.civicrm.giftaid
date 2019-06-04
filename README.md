@@ -1,7 +1,9 @@
 # UK GiftAid Extension for CiviCRM
 
+This extension adds custom fields and logic for managing the UK Gift Aid scheme.
+
 ### Install GiftAid Extension
-See [Here](http://wiki.civicrm.org/confluence/display/CRMDOC/Extensions "CiviCRM Extensions Installation") for full instructions and information on how to set and configure extensions
+See [Here](https://docs.civicrm.org/sysadmin/en/latest/customize/extensions/ "CiviCRM Extensions Installation") for full instructions and information on how to set and configure extensions
 
 ### Upgrade GiftAid Extension
 These instructions assume that you are only upgrading the Gift Aid module from v2.x to higer and not upgrading from v1.0 and are running version 4.4.x or higher CiviCRM.
@@ -24,11 +26,13 @@ These instructions assume that you are only upgrading the Gift Aid module from v
 
 2. Click settings and then choose the specific contribution type(s) you want gift aid to be available for i.e “Donation”
 
-3. [3.0] Go to Gift Aid settings page http://www.example.com/civicrm/admin/gift-aid and select the financial types that should be considered as donation or leave it as default to enable Gift Aid for all financial types.
+3. [3.1] Go to Gift Aid settings page via *Administer->CiviContribute->GiftAid->Settings* and select the financial types that should be considered as donation or leave it as default to enable Gift Aid for all financial types.
 
-4. [3.0] **[Important]** A new type of Gift Aid declaration is applied to covers both present& future donation and the donations a donor made in the past four years from the declaration date as long as the Gift Aid claim amount does not exceed tax amount. The old 'Yes' declaration is reserved to cover any old declarations donors made. Settings for the declatation options can be modified in the 'UK Taxpayer Options' list here: http://www.example.com/civicrm/admin/options?reset=1
+4. [3.0] **[Important]** A new type of Gift Aid declaration is applied to covers both present and future donation and the donations a donor made in the past four years from the declaration date as long as the Gift Aid claim amount does not exceed tax amount. The old 'Yes' declaration is reserved to cover any old declarations donors made. Settings for the declatation options can be modified in the 'UK Taxpayer Options' list here: http://www.example.com/civicrm/admin/options?reset=1
 
 5. [3.0] **[Important]** From Gift Aid 3.0 onwards, a new mechanism is introduced to marking donations from the past 4 years eligible to Gift Aid based on the new declaration type. **Present and future donations will not be affected by this new mechanism.** A scheduled job will be used to handle the 100 past donation records per run. To enable this scheduled job, please go to http://www.example.com/civicrm/admin/job and enable the job 'Process Gift Aid eligible donations'.
+
+6. [3.1] Gift Aid amount is calculated automatically when the contribution is created/updated.
 
 
 ### Configure the Gift Aid Profile and disclaimer

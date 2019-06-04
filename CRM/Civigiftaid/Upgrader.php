@@ -1,5 +1,7 @@
 <?php
 
+use CRM_Civigiftaid_ExtensionUtil as E;
+
 /**
  * Collection of upgrade steps
  */
@@ -75,16 +77,16 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
   public function uninstall() {
 
     $reportUrl = new CRM_Core_DAO_OptionValue();
-    $reportUrl->option_group_id = self::getReportTemplateGroupId();;
+    $reportUrl->option_group_id = self::getReportTemplateGroupId();
     $reportUrl->value = self::REPORT_URL;
     if ($reportUrl->find(TRUE)) {
-      if ($reportUrl->name == $className) {
+      if ($reportUrl->name == self::REPORT_CLASS) {
         $reportUrl->delete();
       }
     }
 
     $reportClass = new CRM_Core_DAO_OptionValue();
-    $reportClass->option_group_id = self::getReportTemplateGroupId();;
+    $reportClass->option_group_id = self::getReportTemplateGroupId();
     $reportClass->name = self::REPORT_CLASS;
     if ($reportClass->find(TRUE)) {
       $reportClass->delete();
@@ -409,17 +411,8 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
    * Set the default admin settings for the extension.
    */
   private function setDefaultSettings() {
-    $settings = new stdClass();
-
-    // Set 'Globally Enabled' by default
-    $settings->globally_enabled = 1;
-    $settings->financial_types_enabled = [];
-
-    CRM_Core_BAO_Setting::setItem(
-      $settings,
-      'Extension',
-      $this->getExtensionKey() . ':settings'
-    );
+    Civi::settings()->set(E::SHORT_NAME . 'globally_enabled', 1);
+    Civi::settings()->set(E::SHORT_NAME . 'financial_types_enabled', []);
   }
 
   /**
@@ -428,9 +421,8 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
    * @throws \CRM_Extension_Exception
    */
   private function unsetSettings() {
-    $settingName = $this->getExtensionKey() . ':settings';
-
-    CRM_Core_BAO_Setting::executeQuery("DELETE FROM civicrm_setting WHERE name = '{$settingName}'");
+    Civi::settings()->revert(E::SHORT_NAME . 'globally_enabled');
+    Civi::settings()->revert(E::SHORT_NAME . 'financial_types_enabled');
   }
 
   /**
@@ -462,24 +454,7 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
     }
   }
 
-  /**
-   * @return string
-   * @throws \CRM_Extension_Exception
-   * @throws \CRM_Extension_Exception_ParseException
-   */
-  private function getExtensionKey() {
-    $info = CRM_Extension_Info::loadFromFile(__DIR__ . '/../../info.xml');
-
-    if (empty($info->key)) {
-      throw new CRM_Extension_Exception('Extension key not found for Gift Aid extension');
-    }
-
-    return $info->key;
-  }
-
   private function log($message) {
-    if (is_object($this->ctx) && method_exists($this->ctx, 'info')) {
-      $this->ctx->log->info($message);
-    }
+    Civi::log()->info($message);
   }
 }

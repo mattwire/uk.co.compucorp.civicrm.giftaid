@@ -1,40 +1,8 @@
 <?php
 
-/*
- +--------------------------------------------------------------------+
- | CiviCRM version 4.3                                              |
- +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2011                                |
- +--------------------------------------------------------------------+
- | This file is a part of CiviCRM.                                    |
- |                                                                    |
- | CiviCRM is free software; you can copy, modify, and distribute it  |
- | under the terms of the GNU Affero General Public License           |
- | Version 3, 19 November 2007 and the CiviCRM Licensing Exception.   |
- |                                                                    |
- | CiviCRM is distributed in the hope that it will be useful, but     |
- | WITHOUT ANY WARRANTY; without even the implied warranty of         |
- | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.               |
- | See the GNU Affero General Public License for more details.        |
- |                                                                    |
- | You should have received a copy of the GNU Affero General Public   |
- | License and the CiviCRM Licensing Exception along                  |
- | with this program; if not, contact CiviCRM LLC                     |
- | at info[AT]civicrm[DOT]org. If you have questions about the        |
- | GNU Affero General Public License or the licensing of CiviCRM,     |
- | see the CiviCRM license FAQ at http://civicrm.org/licensing        |
- +--------------------------------------------------------------------+
-*/
-
 /**
- *
- * @package   CRM
- * @copyright CiviCRM LLC (c) 2004-2011
- * $Id$
- *
+ * https://civicrm.org/license
  */
-require_once 'CRM/Report/Form.php';
-require_once 'CRM/Civigiftaid/Utils/Contribution.php';
 
 class CRM_Civigiftaid_Report_Form_Contribute_GiftAid extends CRM_Report_Form {
   protected $_addressField = FALSE;
@@ -357,7 +325,6 @@ class CRM_Civigiftaid_Report_Form_Contribute_GiftAid extends CRM_Report_Form {
    */
   public function alterDisplay(&$rows) {
     $entryFound = FALSE;
-    require_once 'CRM/Contact/DAO/Contact.php';
     foreach ($rows as $rowNum => $row) {
       // i.e. remove row from report if it has financial type ineligible for Gift Aid
       if (FALSE === $this->hasEligibleFinancialType($row)) {
@@ -383,8 +350,8 @@ class CRM_Civigiftaid_Report_Form_Contribute_GiftAid extends CRM_Report_Form {
         if (isset($row['civicrm_line_item_amount'])) {
           $batch = $this->getBatchById($row['civicrm_entity_batch_batch_id']);
           $giftaidAmount = CRM_Civigiftaid_Utils_Contribution::calculateGiftAidAmt(
-              $row['civicrm_line_item_amount'],
-              $batch['basic_rate_tax']
+            $row['civicrm_line_item_amount'],
+            $batch['basic_rate_tax']
           );
           $rows[$rowNum]['civicrm_line_item_gift_aid_amount'] = number_format((float)$giftaidAmount, 2, '.', '');
         }
@@ -535,5 +502,5 @@ class CRM_Civigiftaid_Report_Form_Contribute_GiftAid extends CRM_Report_Form {
 
     $this->_columnHeaders = $orderedColumnHeaders;
   }
-}
 
+}

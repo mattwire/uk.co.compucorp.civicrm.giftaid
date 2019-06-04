@@ -6,10 +6,10 @@
  * The ExtensionUtil class provides small stubs for accessing resources of this
  * extension.
  */
-class _ExtensionUtil {
+class CRM_Civigiftaid_ExtensionUtil {
   const SHORT_NAME = "civigiftaid";
   const LONG_NAME = "uk.co.compucorp.civicrm.giftaid";
-  const CLASS_PREFIX = "";
+  const CLASS_PREFIX = "CRM_Civigiftaid";
 
   /**
    * Translate a string using the extension's domain.
@@ -77,7 +77,7 @@ class _ExtensionUtil {
 
 }
 
-use _ExtensionUtil as E;
+use CRM_Civigiftaid_ExtensionUtil as E;
 
 /**
  * (Delegated) Implements hook_civicrm_config().
@@ -205,14 +205,14 @@ function _civigiftaid_civix_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL) 
 }
 
 /**
- * @return _Upgrader
+ * @return CRM_Civigiftaid_Upgrader
  */
 function _civigiftaid_civix_upgrader() {
-  if (!file_exists(__DIR__ . '//Upgrader.php')) {
+  if (!file_exists(__DIR__ . '/CRM/Civigiftaid/Upgrader.php')) {
     return NULL;
   }
   else {
-    return _Upgrader_Base::instance();
+    return CRM_Civigiftaid_Upgrader_Base::instance();
   }
 }
 

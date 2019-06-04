@@ -1,3 +1,7 @@
+{*
+ * https://civicrm.org/license
+ *}
+
 {if $row.line_items}
     <table class="line-items" id="line-items-{$contributionId}">
         <tr>

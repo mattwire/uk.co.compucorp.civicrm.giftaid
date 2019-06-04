@@ -1,5 +1,5 @@
-cj(function () {
-    var container = cj(document.getElementsByClassName('gift-aid'));
+CRM.$(function ($) {
+    var container = $(document.getElementsByClassName('CRM_Civigiftaid_Form_Settings'));
 
     /**
      * Base class
@@ -43,52 +43,16 @@ cj(function () {
     };
 
     /**
-     * Batch operations class
-     */
-    var BatchOperations = Base.create();
-
-    BatchOperations.configure = function (config) {
-        Base.configure(config);
-
-        this.contributions = container.find('.contribution');
-        this.lineItems = container.find('.line-items');
-    };
-
-    BatchOperations.init = function () {
-        this.contributions.addClass('collapsed');
-        this.lineItems.toggle();
-    };
-
-    BatchOperations.createBindings = function () {
-        this.contributions.on('click', function () {
-            var contribution = cj(this);
-            var contributionId = contribution.data('contribution-id');
-            var financialItems = cj('#line-items-' + contributionId);
-
-            contribution.toggleClass('collapsed');
-
-            if (contribution.hasClass('collapsed')) {
-                financialItems.fadeOut(100);
-            } else {
-                financialItems.fadeIn(100);
-            }
-        });
-    };
-
-    /**
      * Settings class
      */
     var Settings = Base.create();
 
     Settings.configure = function () {
-        this.financialTypesContainer = container.find('#financial-types-container');
-        this.financialTypes = container.find('#financial_types_enabled');
+        this.financialTypes = container.find('#s2id_financial_types_enabled').parent('td');
         this.globallyEnabled = container.find('#globally_enabled');
     };
 
     Settings.init = function () {
-        this.financialTypes.crmSelect2();
-
         if (this.globallyEnabled.prop('checked')) {
             this.toggleFinancialTypesDisplay();
         }
@@ -98,19 +62,13 @@ cj(function () {
         var self = this;
 
         this.globallyEnabled.on('click', function () {
-            console.log('hello');
             self.toggleFinancialTypesDisplay();
         });
     };
 
     Settings.toggleFinancialTypesDisplay = function () {
-        this.financialTypesContainer.toggle();
+        this.financialTypes.toggle();
     };
 
-    ///////////
-    // Setup //
-    ///////////
-
-    BatchOperations.setup();
     Settings.setup();
 });

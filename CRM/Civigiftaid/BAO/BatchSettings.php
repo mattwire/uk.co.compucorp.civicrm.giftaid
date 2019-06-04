@@ -1,4 +1,7 @@
 <?php
+/**
+ * https://civicrm.org/license
+ */
 
 class CRM_Civigiftaid_BAO_BatchSettings extends CRM_Civigiftaid_DAO_BatchSettings {
 
@@ -7,7 +10,9 @@ class CRM_Civigiftaid_BAO_BatchSettings extends CRM_Civigiftaid_DAO_BatchSetting
    *
    * @param array $params key-value pairs
    *
-   * @return CRM_Civigiftaid_DAO_BatchSettings|NULL
+   * @return \CRM_Civigiftaid_BAO_BatchSettings
+   * @throws \CRM_Extension_Exception
+   * @throws \CiviCRM_API3_Exception
    */
   public static function create($params) {
     static::addDefaults($params);
@@ -40,20 +45,26 @@ class CRM_Civigiftaid_BAO_BatchSettings extends CRM_Civigiftaid_DAO_BatchSetting
   /**
    * Add default value of certain params, if not provided.
    *
-   * @param $params
+   * @param array $params
+   *
+   * @throws \CRM_Extension_Exception
+   * @throws \CiviCRM_API3_Exception
    */
   private static function addDefaults(&$params) {
     if (!isset($params['financial_types_enabled'])) {
-      $params['financial_types_enabled'] = CRM_Civigiftaid_Form_Admin::getFinancialTypesEnabled();
+      $params['financial_types_enabled'] = (array) CRM_Civigiftaid_Settings::getValue('financial_types_enabled');
     }
     if (!isset($params['globally_enabled'])) {
-      $params['globally_enabled'] = CRM_Civigiftaid_Form_Admin::isGloballyEnabled();
+      $params['globally_enabled'] = (bool) CRM_Civigiftaid_Settings::getValue('globally_enabled');
     }
     if (!isset($params['basic_rate_tax'])) {
       $params['basic_rate_tax'] = CRM_Civigiftaid_Utils_Contribution::getBasicRateTax();
     }
   }
 
+  /**
+   * @param array $params
+   */
   private static function preProcessParams(&$params) {
     if (is_array($params['financial_types_enabled'])) {
       $params['financial_types_enabled'] = serialize($params['financial_types_enabled']);

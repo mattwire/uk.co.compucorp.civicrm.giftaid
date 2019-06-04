@@ -221,7 +221,8 @@ function civigiftaid_update_declaration_amount($contributionID) {
   ]);
 
   $giftAidEligibleStatus = $contribution['custom_' . $customFieldID];
-  if (is_null($giftAidEligibleStatus)) {
+
+  if (!is_numeric($giftAidEligibleStatus)) {
     return;
   }
 
@@ -229,13 +230,13 @@ function civigiftaid_update_declaration_amount($contributionID) {
 
   $params = [
     'entity_id'             => $contribution['contact_id'],
-    'eligible_for_gift_aid' => $giftAidEligibleStatus,
+    'eligible_for_gift_aid' => (int) $giftAidEligibleStatus,
     'start_date'            => $contribution['receive_date'],
     'address'               => $addressDetails,
     'post_code'             => $postCode,
   ];
   CRM_Civigiftaid_Utils_GiftAid::setDeclaration($params);
-  if ($giftAidEligibleStatus == CRM_Civigiftaid_Utils_GiftAid::DECLARATION_IS_PAST_4_YEARS || $giftAidEligibleStatus == CRM_Civigiftaid_Utils_GiftAid::DECLARATION_IS_YES) {
+  if ($giftAidEligibleStatus === CRM_Civigiftaid_Utils_GiftAid::DECLARATION_IS_PAST_4_YEARS || $giftAidEligibleStatus === CRM_Civigiftaid_Utils_GiftAid::DECLARATION_IS_YES) {
     CRM_Civigiftaid_Utils_Contribution::updateGiftAidFields($contributionID);
   }
 }

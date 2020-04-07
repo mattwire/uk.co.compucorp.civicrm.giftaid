@@ -126,6 +126,14 @@ function civigiftaid_civicrm_buildForm($formName, &$form) {
  * Only for offline contribution
  */
 function civigiftaid_civicrm_postProcess($formName, &$form) {
+  // Get and store the gift aid declaration value if set for use in civigiftaid_update_declaration_amount
+  if (!isset(Civi::$statics[E::LONG_NAME]['uktaxpayer'])) {
+    $ukTaxPayerField = CRM_Civigiftaid_Utils::getCustomByName('eligible_for_gift_aid', 'Gift_Aid_Declaration');
+    if (isset($form->_submitValues[$ukTaxPayerField])) {
+      Civi::$statics[E::LONG_NAME]['uktaxpayer'] = $form->_submitValues[$ukTaxPayerField];
+    }
+  }
+
   if ($formName != 'CRM_Contact_Form_CustomData') {
     return;
   }
@@ -188,7 +196,13 @@ function civigiftaid_update_declaration_amount($contributionID, $op) {
     return;
   }
 
-  $contactGiftAidEligibleStatus = CRM_Civigiftaid_Utils_GiftAid::isEligibleForGiftAid($contribution);
+  // If declaration updated via contribution page etc. it will have been set in postProcess
+  if (isset(Civi::$statics[E::LONG_NAME]['uktaxpayer'])) {
+    $contactGiftAidEligibleStatus = Civi::$statics[E::LONG_NAME]['uktaxpayer'];
+  }
+  else {
+    $contactGiftAidEligibleStatus = CRM_Civigiftaid_Utils_GiftAid::isEligibleForGiftAid($contribution);
+  }
   $contributionGiftAidEligibleStatus = $contribution[$contributionCustomGiftAidEligibleFieldName];
 
   // Get the gift aid eligible status

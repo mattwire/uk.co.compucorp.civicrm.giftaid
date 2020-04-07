@@ -355,8 +355,10 @@ class CRM_Civigiftaid_Utils_Contribution {
         'contact_id',
         'contribution_status_id',
         'receive_date',
-        CRM_Civigiftaid_Utils::getCustomByName('batch_name', $groupID),
-        CRM_Civigiftaid_Utils::getCustomByName('Eligible_for_Gift_Aid', $groupID)
+        CRM_Civigiftaid_Utils::getCustomByName('batch_name', 'Gift_Aid'),
+        CRM_Civigiftaid_Utils::getCustomByName('Eligible_for_Gift_Aid', 'Gift_Aid'),
+        CRM_Civigiftaid_Utils::getCustomByName('Gift_Aid_Amount', 'Gift_Aid'),
+        CRM_Civigiftaid_Utils::getCustomByName('Amount', 'Gift_Aid'),
       ],
       'options' => ['limit' => 0],
     ];

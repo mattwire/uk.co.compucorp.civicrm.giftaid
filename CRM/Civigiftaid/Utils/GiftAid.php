@@ -574,12 +574,16 @@ class CRM_Civigiftaid_Utils_GiftAid {
       return FALSE;
     }
 
-    $groupID = civicrm_api3('CustomGroup', 'getvalue', [
-      'return' => "id",
-      'name' => "gift_aid",
-    ]);
-
-    $contributionEligible = CRM_Utils_Array::value(CRM_Civigiftaid_Utils::getCustomByName('Eligible_for_Gift_Aid', $groupID), $contribution);
+    $eligibleAmount = $contribution[CRM_Civigiftaid_Utils::getCustomByName('Amount', 'Gift_Aid')];
+    if (!empty($eligibleAmount) && ($eligibleAmount == 0)) {
+      // Contribution has 0 eligible amount.
+      return FALSE;
+    }
+    $isEligible = $contribution[CRM_Civigiftaid_Utils::getCustomByName('Eligible_for_Gift_Aid', 'Gift_Aid')];
+    if (!empty($isEligible) && ($isEligible == 0)) {
+      // Contribution marked as not eligible
+      return FALSE;
+    };
     // If it is not set ('') it's not the same as DECLARATION_IS_NO
     if (!empty($contributionEligible) && ($contributionEligible == self::DECLARATION_IS_NO)) {
       return FALSE;

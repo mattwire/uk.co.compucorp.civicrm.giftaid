@@ -1,3 +1,13 @@
+## Release 3.3.3
+
+* Include first donation in the batch
+* Due to the timestamp on the declaration is created after the contribution hence the first donation doesn't gets included in batch. Set the timestamp as the date rather than time.
+* Clear batch_name if we created a new contribution in a recur series (it's copied across by default by Contribution.repeattransaction).
+* Check and set label for 'Eligible amount' field on contribution.
+* Always make sure current declaration is set if we have one - fixes issue with overwriting declaration with 'No'.
+* Fix [#5](https://github.com/mattwire/uk.co.compucorp.civicrm.giftaid/issues/5) Donations included in batch although financial types disabled in settings.
+* Trigger create of new gift aid declaration from contribution form if required.
+
 ## Release 3.3.2
 
 * Handle transitions between the 3 declaration states without losing information - create a new declaration when state is changed.

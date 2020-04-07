@@ -8,7 +8,7 @@
   </description>
   <urls>
     <url desc="Main Extension Page">https://github.com/mattwire/uk.co.compucorp.civicrm.giftaid</url>
-    <url desc="Support">https://www.mjwconsult.co.uk/support</url>
+    <url desc="Support">https://mjw.pt/support/giftaid</url>
     <url desc="Licensing">https://civicrm.org/licensing</url>
   </urls>
   <license>AGPL</license>
@@ -16,8 +16,8 @@
     <author>MJW Consulting, Erawat Chamanont, Jamie Novick, Guanhuan Chen, Robin Mitra</author>
     <email>mjw@mjwconsult.co.uk, jamie@compucorp.co.uk, guanhuan@compucorp.co.uk</email>
   </maintainer>
-  <releaseDate>2020-02-24</releaseDate>
-  <version>3.3.2</version>
+  <releaseDate>2020-04-07</releaseDate>
+  <version>3.3.3</version>
   <develStage>beta</develStage>
   <compatibility>
     <ver>5.19</ver>

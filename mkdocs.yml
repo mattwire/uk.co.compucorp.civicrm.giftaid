@@ -1,23 +1,26 @@
-site_name: Smart Debit (Direct Debit provider in the UK)
-repo_url: https://github.com/mattwire/org.civicrm.smartdebit
-theme: material
+site_name: UK Gift Aid
+repo_url: https://github.com/mattwire/uk.co.compucorp.civicrm.giftaid
+theme:
+  name: material
 markdown_extensions:
   - attr_list
   - admonition
   - def_list
   - codehilite
-  - toc(permalink=true)
+  - toc:
+      permalink: true
   - pymdownx.superfences
   - pymdownx.inlinehilite
   - pymdownx.tilde
   - pymdownx.betterem
   - pymdownx.mark
 
-pages:
+nav:
 - Release Notes: release/release_notes.md
 - Introduction: index.md
 - Setup and Configuration: setup.md
 - The Gift Aid Declaration: declaration.md
+- Contributions and Eligibility: contributions.md
 - Creating and managing your batch: batches.md
 - Submission to HMRC: submission.md
 - Managing the basic rate of Tax: tax.md

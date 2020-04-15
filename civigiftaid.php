@@ -11,6 +11,12 @@ define('CIVICRM_GIFTAID_REMOVE_TASKID', 1436);
  */
 function civigiftaid_civicrm_config(&$config) {
   _civigiftaid_civix_civicrm_config($config);
+
+  if (isset(Civi::$statics[__FUNCTION__])) { return; }
+  Civi::$statics[__FUNCTION__] = 1;
+
+  // Add listeners for CiviCRM hooks that might need altering by other scripts
+  Civi::dispatcher()->addListener('hook_civicrm_post', 'CRM_Civigiftaid_SetContributionGiftAidEligibility::run');
 }
 
 /**
@@ -240,13 +246,6 @@ function civigiftaid_update_declaration_amount($contributionID, $op) {
  * @throws \CiviCRM_API3_Exception
  */
 function civigiftaid_civicrm_post($op, $objectName, $objectId, &$objectRef) {
-  $hooks = [
-    new CRM_Civigiftaid_Hook_Post_SetContributionGiftAidEligibility(),
-  ];
-  foreach ($hooks as $hook) {
-    $hook->run($op, $objectName, $objectId, $objectRef);
-  }
-
   switch ($objectName) {
     case 'Contribution':
       if ($op == 'edit' || $op == 'create') {

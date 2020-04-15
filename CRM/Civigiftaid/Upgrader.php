@@ -18,12 +18,11 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
   public function install() {
     $this->setOptionGroups();
     $this->enableOptionGroups(1);
-    self::migrateOneToTwo($this);
+    $this->setCustomFields();
     $this->upgrade_3000();
     $this->upgrade_3101();
     $this->upgrade_3103();
     $this->upgrade_3104();
-    $this->upgrade_3105();
   }
 
   /**
@@ -144,7 +143,16 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
   }
 
   public function upgrade_3105() {
-    $this->log('Set contribution "Eligible Amount" custom field label');
+    return TRUE;
+  }
+
+  public function upgrade_3106() {
+    $this->log('Updating custom fields');
+    $this->setCustomFields();
+    return TRUE;
+  }
+
+  private function setCustomFields() {
     $amountCustomField = civicrm_api3('CustomField', 'getsingle', [
       'custom_group_id' => "Gift_Aid",
       'name' => "Amount",
@@ -152,7 +160,46 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
     if ($amountCustomField['label'] !== 'Eligible Amount') {
       civicrm_api3('CustomField', 'create', ['id' => $amountCustomField['id'], 'label' => 'Eligible Amount']);
     }
-    return TRUE;
+
+    $customFields = $this->getCustomFields();
+    foreach ($customFields as $customField) {
+      try {
+        $existingField = civicrm_api3('CustomField', 'getsingle', [
+          'custom_group_id' => $customField['custom_group_id'],
+          'name' => $customField['name']
+        ]);
+        if (!empty($customField['option_group_id'])) {
+          $customField['option_group_id'] = civicrm_api3('OptionGroup', 'getvalue', ['name' => $customField['option_group_id'], 'return' => 'id']);
+        }
+      }
+      catch (Exception $e) {
+        continue;
+      }
+      $customField = array_merge($customField, ['id' => $existingField['id']]);
+      civicrm_api3('CustomField', 'create', $customField);
+    }
+  }
+
+  private function getCustomFields() {
+    $optionGroups = $this->getOptionGroups();
+    $customFields = [
+      'Eligible_for_Gift_Aid' => [
+        'custom_group_id' => 'Gift_Aid',
+        'name' => 'Eligible_for_Gift_Aid',
+        'label' => 'Eligible for Gift Aid?',
+        'data_type' => 'Int',
+        'html_type' => 'Radio',
+        'is_searchable' => '1',
+        'is_search_range' => '0',
+        'weight' => '1',
+        'help_pre' => '\'Eligible for Gift Aid\' will be set automatically based on the financial type of the contribution if you do not select Yes or No',
+        'is_active' => '1',
+        'column_name' => 'eligible_for_gift_aid',
+        'option_group_id' => 'uk_taxpayer_options',
+        'in_selector' => '0'
+      ]
+    ];
+    return $customFields;
   }
 
   private function getOptionGroups() {
@@ -202,6 +249,7 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
         'name' => 'eligible_for_giftaid',
         'is_default' => 0,
         'weight' => 2,
+        'is_reserved' => 1,
       ],
       [
         'option_group_id' => $optionGroups['eligibility_declaration_options']['id'],
@@ -210,6 +258,7 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
         'name' => 'not_eligible_for_giftaid',
         'is_default' => 0,
         'weight' => 3,
+        'is_reserved' => 1,
       ],
       [
         'option_group_id' => $optionGroups['eligibility_declaration_options']['id'],
@@ -218,6 +267,7 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
         'name' => 'past_four_years',
         'is_default' => 0,
         'weight' => 1,
+        'is_reserved' => 1,
       ],
       [
         'option_group_id' => $optionGroups['uk_taxpayer_options']['id'],
@@ -225,6 +275,7 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
         'value' => 1,
         'name' => 'yes_uk_taxpayer',
         'is_default' => 0,
+        'is_reserved' => 1,
       ],
       [
         'option_group_id' => $optionGroups['uk_taxpayer_options']['id'],
@@ -232,6 +283,7 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
         'value' => 0,
         'name' => 'not_uk_taxpayer',
         'is_default' => 0,
+        'is_reserved' => 1,
       ],
       [
         'option_group_id' => $optionGroups['uk_taxpayer_options']['id'],
@@ -240,6 +292,7 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
         'name' => 'uk_taxpayer_past_four_years',
         'is_active' => 0,
         'is_default' => 0,
+        'is_reserved' => 1,
       ],
 
       [

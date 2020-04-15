@@ -1,3 +1,8 @@
+## Release 3.3.4
+
+* Fix issues with setting "Eligible for gift aid" on contributions.
+* Added [documentation](../contributions.md) to explain how the gift aid fields on contributions work.
+
 ## Release 3.3.3
 
 * Include first donation in the batch

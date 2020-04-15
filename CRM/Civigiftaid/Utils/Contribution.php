@@ -69,7 +69,7 @@ class CRM_Civigiftaid_Utils_Contribution {
           'entity_table' => 'civicrm_contribution',
         ]);
 
-        self::updateGiftAidFields($contribution['id'], NULL, $batchName);
+        self::updateGiftAidFields($contribution['id'], NULL, $batchName, $addToBatch = TRUE);
 
         $contributionsAdded[] = $contribution['id'];
       }
@@ -102,29 +102,35 @@ class CRM_Civigiftaid_Utils_Contribution {
    * @throws \CRM_Extension_Exception
    * @throws \CiviCRM_API3_Exception
    */
-  public static function updateGiftAidFields($contributionID, $eligibleForGiftAid = NULL, $batchName = '') {
-    $totalAmount = (float) civicrm_api3('Contribution', 'getvalue', [
-      'return' => "total_amount",
-      'id' => $contributionID,
-    ]);
-    $giftAidableContribAmt = self::getGiftAidableContribAmt($totalAmount, $contributionID);
-    $giftAidAmount = self::calculateGiftAidAmt($giftAidableContribAmt, self::getBasicRateTax());
+  public static function updateGiftAidFields($contributionID, $eligibleForGiftAid = NULL, $batchName = '', $addToBatch = FALSE) {
+    if (!empty($batchName) && !$addToBatch) {
+      // Don't touch this contribution - it's already part of a batch
+      return;
+    }
 
-    $groupID = civicrm_api3('CustomGroup', 'getvalue', [
-      'return' => "id",
-      'name' => "gift_aid",
-    ]);
-    $contributionParams = [
-      'entity_id' => $contributionID,
-      CRM_Civigiftaid_Utils::getCustomByName('gift_aid_amount', $groupID) => $giftAidAmount,
-      CRM_Civigiftaid_Utils::getCustomByName('amount', $groupID) => $giftAidableContribAmt,
-    ];
     if ($batchName !== NULL) {
-      $contributionParams[CRM_Civigiftaid_Utils::getCustomByName('batch_name', $groupID)] = $batchName;
+      $contributionParams[CRM_Civigiftaid_Utils::getCustomByName('batch_name', 'Gift_Aid')] = $batchName;
     }
-    if ($eligibleForGiftAid) {
-      $contributionParams[CRM_Civigiftaid_Utils::getCustomByName('Eligible_for_Gift_Aid', $groupID)] = 1;
+    if (isset($eligibleForGiftAid)) {
+      $eligibleForGiftAid = (int) $eligibleForGiftAid;
+      $contributionParams[CRM_Civigiftaid_Utils::getCustomByName('Eligible_for_Gift_Aid', 'Gift_Aid')] = (int) $eligibleForGiftAid;
+      if ($eligibleForGiftAid === 0) {
+        $contributionParams[CRM_Civigiftaid_Utils::getCustomByName('gift_aid_amount', 'Gift_Aid')] = NULL;
+        $contributionParams[CRM_Civigiftaid_Utils::getCustomByName('amount', 'Gift_Aid')] = NULL;
+      }
+      else {
+        // Eligible - calculate gift aid amounts
+        $totalAmount = (float) civicrm_api3('Contribution', 'getvalue', [
+          'return' => "total_amount",
+          'id' => $contributionID,
+        ]);
+        $giftAidableContribAmt = self::getGiftAidableContribAmt($totalAmount, $contributionID);
+        $giftAidAmount = self::calculateGiftAidAmt($giftAidableContribAmt, self::getBasicRateTax());
+        $contributionParams[CRM_Civigiftaid_Utils::getCustomByName('gift_aid_amount', 'Gift_Aid')] = $giftAidAmount;
+        $contributionParams[CRM_Civigiftaid_Utils::getCustomByName('amount', 'Gift_Aid')] = $giftAidableContribAmt;
+      }
     }
+    $contributionParams['entity_id'] = $contributionID;
     // We use CustomValue.create instead of Contribution.create because Contribution.create is way too slow
     civicrm_api3('CustomValue', 'create', $contributionParams);
   }

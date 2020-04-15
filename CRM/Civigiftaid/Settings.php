@@ -49,17 +49,13 @@ class CRM_Civigiftaid_Settings {
 
   /**
    * Read setting that has prefix in database and return single value
-   * @param $name
+   *
+   * @param string $name
+   *
    * @return mixed
    */
   public static function getValue($name) {
-    $className = E::CLASS_PREFIX . '_Settings';
-    $settings = civicrm_api3('setting', 'get', ['return' => $className::getName($name,true)]);
-    $domainID = CRM_Core_Config::domainID();
-    if (isset($settings['values'][$domainID][$className::getName($name,true)])) {
-      return $settings['values'][$domainID][$className::getName($name, true)];
-    }
-    return '';
+    return \Civi::settings()->get(E::SHORT_NAME . "_{$name}");
   }
 
   /**

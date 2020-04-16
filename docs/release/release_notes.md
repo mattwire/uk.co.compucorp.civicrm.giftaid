@@ -1,3 +1,9 @@
+## Release 3.3.6
+
+* Rework "Remove from Batch" to improve performance and ensure that what is shown on the screen is what is added to the batch.
+* Rework "Add to Batch" task to improve performance and ensure that what is shown on the screen is what is added to the batch.
+* Update GiftAid.updateeligiblecontributions API and [document](../api.md).
+
 ## Release 3.3.5
 
 * Update and refactor how we create/update declarations.

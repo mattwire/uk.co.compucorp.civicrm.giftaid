@@ -1,7 +1,12 @@
+## Release 3.3.5
+
+* Update and refactor how we create/update declarations.
+* Added [documentation for declarations](../declaration.md) to explain how the declarations are created/updated and what the fields mean.
+
 ## Release 3.3.4
 
 * Fix issues with setting "Eligible for gift aid" on contributions.
-* Added [documentation](../contributions.md) to explain how the gift aid fields on contributions work.
+* Added [documentation for contributions](../contributions.md) to explain how the gift aid fields on contributions work.
 
 ## Release 3.3.3
 

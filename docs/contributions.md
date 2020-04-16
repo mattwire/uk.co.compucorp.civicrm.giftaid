@@ -22,3 +22,7 @@ This is the actual gift aid amount of the eligible amount.
 #### Batch Name
 
 This is set automatically when the contribution is added to a batch.
+
+## See also:
+
+[GiftAid.updateeligiblecontributions](../api.md) - API to set "Eligible for Gift Aid" on all contributions where it was not previously set.

@@ -15,13 +15,13 @@
 class CRM_Civigiftaid_Utils_Contribution {
 
   /**
-   * Given an array of contributionIDs, add them to a batch
+   * Given an array of contributionIDs, re-check validity and add them to a batch
    *
    * @param array $contributionIDs
    * @param int $batchID
    *
    * @return array
-   *           (total, added, notAdded) ids of contributions added to the batch
+   *           (total, addedContributionIDs, notAddedContributionIDs) ids of contributions added to the batch
    * @throws \CRM_Extension_Exception
    * @throws \CiviCRM_API3_Exception
    */
@@ -47,19 +47,23 @@ class CRM_Civigiftaid_Utils_Contribution {
     }
 
     // Get all contributions from found IDs that are not already in a batch
-    $groupID = civicrm_api3('CustomGroup', 'getvalue', [
-      'return' => "id",
-      'name' => "gift_aid",
-    ]);
     $contributionParams = [
       'id' => ['IN' => $contributionIDs],
-      'return' => ['id', 'contact_id', 'contribution_status_id', 'receive_date', CRM_Civigiftaid_Utils::getCustomByName('batch_name', $groupID)],
+      'return' => [
+        'id',
+        'contact_id',
+        'contribution_status_id',
+        'receive_date',
+        CRM_Civigiftaid_Utils::getCustomByName('Eligible_for_Gift_Aid', 'Gift_Aid'),
+        CRM_Civigiftaid_Utils::getCustomByName('Amount', 'Gift_Aid'),
+        CRM_Civigiftaid_Utils::getCustomByName('gift_aid_amount', 'Gift_Aid'),
+        CRM_Civigiftaid_Utils::getCustomByName('batch_name', 'Gift_Aid')],
       'options' => ['limit' => 0],
     ];
-    $contributions = civicrm_api3('Contribution', 'get', $contributionParams);
-    foreach (CRM_Utils_Array::value('values', $contributions) as $contribution) {
+    $contributions = civicrm_api3('Contribution', 'get', $contributionParams)['values'];
+    foreach ($contributions as $contribution) {
       // check if the selected contribution id already in a batch
-      if (!empty($contribution[CRM_Civigiftaid_Utils::getCustomByName('batch_name', $groupID)])) {
+      if (!empty($contribution[CRM_Civigiftaid_Utils::getCustomByName('batch_name', 'Gift_Aid')])) {
         $contributionsNotAdded[] = $contribution['id'];
         continue;
       }
@@ -94,8 +98,8 @@ class CRM_Civigiftaid_Utils_Contribution {
 
     return [
       count($contributionIDs),
-      count($contributionsAdded),
-      count($contributionsNotAdded)
+      $contributionsAdded,
+      $contributionsNotAdded
     ];
   }
 
@@ -348,6 +352,7 @@ class CRM_Civigiftaid_Utils_Contribution {
    * @param array $contributionIDs
    *
    * @return array
+   * @throws \CRM_Extension_Exception
    * @throws \CiviCRM_API3_Exception
    */
   public static function validateContributionToBatch($contributionIDs) {
@@ -356,10 +361,6 @@ class CRM_Civigiftaid_Utils_Contribution {
     $contributionsNotValid = [];
 
     // Get all contributions from found IDs that are not already in a batch
-    $groupID = civicrm_api3('CustomGroup', 'getvalue', [
-      'return' => "id",
-      'name' => "gift_aid",
-    ]);
     $contributionParams = [
       'id' => ['IN' => $contributionIDs],
       'return' => [
@@ -374,10 +375,10 @@ class CRM_Civigiftaid_Utils_Contribution {
       ],
       'options' => ['limit' => 0],
     ];
-    $contributions = civicrm_api3('Contribution', 'get', $contributionParams);
+    $contributions = civicrm_api3('Contribution', 'get', $contributionParams)['values'];
 
-    foreach (CRM_Utils_Array::value('values', $contributions) as $contribution) {
-      if (!empty($contribution[CRM_Civigiftaid_Utils::getCustomByName('batch_name', $groupID)])) {
+    foreach ($contributions as $contribution) {
+      if (!empty($contribution[CRM_Civigiftaid_Utils::getCustomByName('batch_name', 'Gift_Aid')])) {
         $contributionsAlreadyAdded[] = $contribution['id'];
       }
       elseif (self::isEligibleForGiftAid($contribution)

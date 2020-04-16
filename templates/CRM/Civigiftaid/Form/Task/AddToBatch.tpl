@@ -38,7 +38,7 @@
 
     <h3>{ts}Summary{/ts}</h3>
 
-    <p>Number of selected contributions: {$selectedContributions}</p>
+    <p>Number of contributions that were selected: {$selectedContributions}</p>
 
     {if $totalAddedContributions}
         <div class="crm-accordion-wrapper crm-accordion_title-accordion crm-accordion-closed">
@@ -88,7 +88,7 @@
     {if $alreadyAddedContributions}
         <div class="crm-accordion-wrapper crm-accordion_title-accordion crm-accordion-closed">
             <div class="crm-accordion-header">
-                Number of contributions already in a batch: {$alreadyAddedContributions}
+                Number of contributions already in a batch (will not be added to batch): {$alreadyAddedContributions}
             </div>
             <!-- /.crm-accordion-header -->
             <div class="crm-accordion-body">
@@ -135,7 +135,7 @@
     {if $notValidContributions}
         <div class="crm-accordion-wrapper crm-accordion_title-accordion crm-accordion-closed">
             <div class="crm-accordion-header">
-                Number of contributions not valid for gift aid: {$notValidContributions}
+                Number of contributions not valid for gift aid (will not be added to batch): {$notValidContributions}
             </div>
             <!-- /.crm-accordion-header -->
             <div class="crm-accordion-body">

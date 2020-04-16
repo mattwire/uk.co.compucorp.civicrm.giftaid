@@ -1,3 +1,7 @@
+## Release 3.3.7
+
+* Allow editing address on the declaration.
+
 ## Release 3.3.6
 
 * Rework "Remove from Batch" to improve performance and ensure that what is shown on the screen is what is added to the batch.

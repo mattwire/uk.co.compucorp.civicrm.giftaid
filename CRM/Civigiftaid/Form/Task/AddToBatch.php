@@ -40,8 +40,8 @@ class CRM_Civigiftaid_Form_Task_AddToBatch extends CRM_Contribute_Form_Task {
     if ($this->isSubmitted()) {
       return;
     }
-    list($totalContributionCount, $addedContributionIDs, $alreadyAddedContributionIDs, $notValidContributionIDs) =
-      CRM_Civigiftaid_Utils_Contribution::validateContributionToBatch($this->_contributionIds);
+    list($totalContributionCount, $addedContributionIDs, $alreadyAddedContributionIDs, $notValidContributionIDs)
+      = CRM_Civigiftaid_Utils_Contribution::validateContributionToBatch($this->_contributionIds);
     $session = new CRM_Core_Session();
     $session->set($this->batchName, $addedContributionIDs, E::SHORT_NAME);
     $this->assign('selectedContributions', $totalContributionCount);
@@ -109,19 +109,18 @@ class CRM_Civigiftaid_Form_Task_AddToBatch extends CRM_Contribute_Form_Task {
       ['labelColumn' => 'name']
     );
     $batchParams['mode_id'] = CRM_Utils_Array::key('Manual Batch', $batchMode);
+    $session = new CRM_Core_Session();
+    $contributionIDsToAdd = $session->get($this->batchName, E::SHORT_NAME);
 
     $transaction = new CRM_Core_Transaction();
 
     $createdBatch = CRM_Batch_BAO_Batch::create($batchParams);
-
     $batchID = $createdBatch->id;
     $batchLabel = $batchParams['title'];
 
     // Save current settings for the batch
     CRM_Civigiftaid_BAO_BatchSettings::create(['batch_id' => $batchID]);
 
-    $session = new CRM_Core_Session();
-    $contributionIDsToAdd = $session->get($this->batchName, E::SHORT_NAME);
     list($total, $addedContributionIDs, $notAddedContributionIDs) =
       CRM_Civigiftaid_Utils_Contribution::addContributionToBatch($contributionIDsToAdd, $batchID);
 
@@ -141,7 +140,7 @@ class CRM_Civigiftaid_Form_Task_AddToBatch extends CRM_Contribute_Form_Task {
       ];
       $statusMessage[] = E::ts('Contribution IDs added to batch: %1', [1 => implode(', ', $addedContributionIDs)]);
       if (!empty($notAddedContributionIDs)) {
-        $statusMessage[] = E::ts('Total Contributions already in batch or not valid: %1', [1 => implode(', ', $notAddedContributionIDs)]);
+        $statusMessage[] = E::ts('Contribution IDs already in batch or not valid: %1', [1 => implode(', ', $notAddedContributionIDs)]);
       }
       $statusMessage = implode('<br/>', $statusMessage);
     }

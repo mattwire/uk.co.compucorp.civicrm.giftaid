@@ -152,47 +152,43 @@ class CRM_Civigiftaid_Utils_Contribution {
    * @throws \CiviCRM_API3_Exception
    */
   public static function removeContributionFromBatch($contributionIDs) {
-    $contributionRemoved = [];
-    $contributionNotRemoved = [];
+    $contributionIDsRemoved = [];
+    $contributionIDsNotRemoved = [];
 
-    list($total, $contributionsToRemove, $notInBatch, $alreadySubmitted) =
+    list($total, $contributionsIDsToRemove, $notInBatch, $alreadySubmitted) =
       self::validationRemoveContributionFromBatch($contributionIDs);
 
-    $contributions = self::getContributionDetails($contributionsToRemove);
+    $contributions = self::getContributionDetails($contributionsIDsToRemove);
 
-    if (!empty($contributions)) {
-      foreach ($contributions as $contribution) {
-        if (!empty($contribution['batch_id'])) {
+    foreach ($contributions as $contribution) {
+      if (!empty($contribution['batch_id'])) {
 
-          $batchContribution = new CRM_Batch_DAO_EntityBatch();
-          $batchContribution->entity_table = 'civicrm_contribution';
-          $batchContribution->entity_id = $contribution['contribution_id'];
-          $batchContribution->batch_id = $contribution['batch_id'];
-          $batchContribution->delete();
+        $batchContribution = new CRM_Batch_DAO_EntityBatch();
+        $batchContribution->entity_table = 'civicrm_contribution';
+        $batchContribution->entity_id = $contribution['contribution_id'];
+        $batchContribution->batch_id = $contribution['batch_id'];
+        $batchContribution->delete();
 
-          $groupID = civicrm_api3('CustomGroup', 'getvalue', [
-            'return' => "id",
-            'name' => "gift_aid",
-          ]);
-          $contributionParams = [
-            'id' => $contribution['contribution_id'],
-            CRM_Civigiftaid_Utils::getCustomByName('batch_name', $groupID) => 'null',
-          ];
-          civicrm_api3('Contribution', 'create', $contributionParams);
-
-          array_push($contributionRemoved, $contribution['contribution_id']);
-
-        }
-        else {
-          array_push($contributedNotRemoved, $contribution['contribution_id']);
-        }
+        $groupID = civicrm_api3('CustomGroup', 'getvalue', [
+          'return' => "id",
+          'name' => "gift_aid",
+        ]);
+        $contributionParams = [
+          'id' => $contribution['contribution_id'],
+          CRM_Civigiftaid_Utils::getCustomByName('batch_name', $groupID) => 'null',
+        ];
+        civicrm_api3('Contribution', 'create', $contributionParams);
+        $contributionIDsRemoved[] = $contribution['contribution_id'];
+      }
+      else {
+        $contributionIDsNotRemoved[] = $contribution['contribution_id'];
       }
     }
 
     return [
       count($contributionIDs),
-      count($contributionRemoved),
-      count($contributionNotRemoved)
+      $contributionIDsRemoved,
+      $contributionIDsNotRemoved
     ];
   }
 
@@ -307,7 +303,7 @@ class CRM_Civigiftaid_Utils_Contribution {
    * @return array
    */
   public static function validationRemoveContributionFromBatch($contributionIDs) {
-    $contributionsAlreadySubmited = [];
+    $contributionsAlreadySubmitted = [];
     $contributionsNotInBatch = [];
     $contributionsToRemove = [];
 
@@ -321,7 +317,7 @@ class CRM_Civigiftaid_Utils_Contribution {
         if (self::isOnlineSubmissionExtensionInstalled()) {
 
           if (self::isBatchAlreadySubmitted($batchContribution->batch_id)) {
-            $contributionsAlreadySubmited[] = $contributionID;
+            $contributionsAlreadySubmitted[] = $contributionID;
           }
           else {
             $contributionsToRemove[] = $contributionID;
@@ -340,7 +336,7 @@ class CRM_Civigiftaid_Utils_Contribution {
       count($contributionIDs),
       $contributionsToRemove,
       $contributionsNotInBatch,
-      $contributionsAlreadySubmited
+      $contributionsAlreadySubmitted
     ];
   }
 

@@ -19,48 +19,60 @@ class CRM_Civigiftaid_Form_Task_RemoveFromBatch extends CRM_Contribute_Form_Task
 
   public function preProcess() {
     parent::preProcess();
-    list($total, $toRemove, $notInBatch, $alreadySubmitted) = CRM_Civigiftaid_Utils_Contribution::validationRemoveContributionFromBatch($this->_contributionIds);
 
-    $this->assign('selectedContributions', $total);
-    $this->assign('totalToRemoveContributions', count($toRemove));
-    $this->assign('notInBatchContributions', count($notInBatch));
-    $this->assign('alreadySubmitedContributions', count($alreadySubmitted));
-    $this->assign(
-      'onlineSubmissionExtensionInstalled',
-      CRM_Civigiftaid_Utils_Contribution::isOnlineSubmissionExtensionInstalled()
-    );
+    if ($this->isSubmitted()) {
+      return;
+    }
 
-    $contributionsToRemoveRows = CRM_Civigiftaid_Utils_Contribution::getContributionDetails($toRemove);
+    list($totalCount, $toRemoveContributionIDs, $notInBatchContributionIDs, $alreadySubmittedContributionIDs)
+      = CRM_Civigiftaid_Utils_Contribution::validationRemoveContributionFromBatch($this->_contributionIds);
+    $session = new CRM_Core_Session();
+    $session->set('contributionIDsToRemoveFromBatch', $toRemoveContributionIDs, E::SHORT_NAME);
+    $this->assign('selectedContributions', $totalCount);
+    $this->assign('totalToRemoveContributions', count($toRemoveContributionIDs));
+    $this->assign('notInBatchContributions', count($notInBatchContributionIDs));
+    $this->assign('alreadySubmitedContributions', count($alreadySubmittedContributionIDs));
+    $this->assign('onlineSubmissionExtensionInstalled', CRM_Civigiftaid_Utils_Contribution::isOnlineSubmissionExtensionInstalled());
+
+    $contributionsToRemoveRows = CRM_Civigiftaid_Utils_Contribution::getContributionDetails($toRemoveContributionIDs);
     $this->assign('contributionsToRemoveRows', $contributionsToRemoveRows);
 
-    $contributionsAlreadySubmitedRows = CRM_Civigiftaid_Utils_Contribution::getContributionDetails($alreadySubmitted);
+    $contributionsAlreadySubmitedRows = CRM_Civigiftaid_Utils_Contribution::getContributionDetails($alreadySubmittedContributionIDs);
     $this->assign('contributionsAlreadySubmitedRows', $contributionsAlreadySubmitedRows);
 
-    $contributionsNotInBatchRows = CRM_Civigiftaid_Utils_Contribution::getContributionDetails($notInBatch);
+    $contributionsNotInBatchRows = CRM_Civigiftaid_Utils_Contribution::getContributionDetails($notInBatchContributionIDs);
     $this->assign('contributionsNotInBatchRows', $contributionsNotInBatchRows);
   }
 
   public function buildQuickForm() {
+    if ($this->isSubmitted()) {
+      return;
+    }
+
     $this->addDefaultButtons(E::ts('Remove from batch'), 'next', 'cancel');
   }
 
   public function postProcess() {
+    $session = new CRM_Core_Session();
+    $contributionIDsToRemove = $session->get('contributionIDsToRemoveFromBatch', E::SHORT_NAME);
+
     $transaction = new CRM_Core_Transaction();
 
-    list($total, $removed, $notRemoved) = CRM_Civigiftaid_Utils_Contribution::removeContributionFromBatch($this->_contributionIds);
+    list($total, $removedContributionIDs, $notRemovedContributionIDs) =
+      CRM_Civigiftaid_Utils_Contribution::removeContributionFromBatch($contributionIDsToRemove);
 
-    if ($removed <= 0) {
+    if (count($removedContributionIDs) === 0) {
       $status = E::ts('Could not removed contribution from batch, as there were no valid contribution(s) to be removed.');
     } else {
       $transaction->commit();
       $status = E::ts('Total Selected Contribution(s): %1', [1 => $total]);
       CRM_Core_Session::setStatus($status);
 
-      if ($removed) {
-        $status = E::ts('Total Contribution(s) removed from batch: %1', [1 => $removed]);
+      if ($removedContributionIDs) {
+        $status = E::ts('Contribution IDs removed from batch: %1', [1 => implode(', ', $removedContributionIDs)]);
       }
-      if ($notRemoved) {
-        $status = E::ts('Total Contribution(s) not removed from batch: %1', [1 => $notRemoved]);
+      if ($notRemovedContributionIDs) {
+        $status = E::ts('Contribution IDs not removed from batch: %1', [1 => implode(', ', $notRemovedContributionIDs)]);
       }
     }
     CRM_Core_Session::setStatus($status);

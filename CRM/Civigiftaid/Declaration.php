@@ -174,7 +174,7 @@ class CRM_Civigiftaid_Declaration {
    *
    * @param int $contactID
    *
-   * @return array
+    * @return array
    */
   private static function getPartialDeclaration($contactID): array {
     $sql = "SELECT id as id, start_date, eligible_for_gift_aid

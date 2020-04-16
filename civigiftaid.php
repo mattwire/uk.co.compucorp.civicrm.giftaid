@@ -204,37 +204,40 @@ function civigiftaid_civicrm_postProcess($formName, &$form) {
   }
 
   $groupID = $form->getVar('_groupID');
-  $contactId = $form->getVar('_entityId');
+  $contactID = $form->getVar('_entityId');
   $customGroupTableName = civicrm_api3('CustomGroup', 'getvalue', [
     'id' => $groupID,
     'return' => 'table_name',
   ]);
 
   if ($customGroupTableName == 'civicrm_value_gift_aid_declaration') {
-    //FIXME: dirty hack to get the latest declaration for the contact
+    // Get the latest declaration for the contact
     $sql = "
       SELECT MAX(id) FROM {$customGroupTableName}
       WHERE entity_id = %1";
-    $params = [1 => [$contactId, 'Integer']];
+    $params = [1 => [$contactID, 'Integer']];
     $rowId = CRM_Core_DAO::singleValueQuery($sql, $params);
 
-    // Get the home address of the contact
-    list($addressDetails, $postCode) = CRM_Civigiftaid_Declaration::getAddressAndPostalCode($contactId);
+    $sql = "
+    SELECT * FROM {$customGroupTableName}
+    WHERE id=%1";
+    $dao = CRM_Core_DAO::executeQuery($sql, [1 => [$rowId, 'Integer']]);
+    $dao->fetch();
 
+    // Get the home address of the contact
+    list($addressDetails, $postCode) = CRM_Civigiftaid_Declaration::getAddressAndPostalCode($contactID);
+    $sqlSET[] = 'address = %2';
+    $sqlSET[] = 'post_code = %3';
+    $queryParams[2] = [$addressDetails, 'String'];
+    $queryParams[3] = [$postCode, 'String'];
+
+    $queryParams[4] = [$rowId, 'Integer'];
     $sql = "
       UPDATE {$customGroupTableName}
-      SET  address = %1,
-      post_code = %2
-      WHERE  id = %3";
+      SET " . implode(', ', $sqlSET) . "
+      WHERE  id = %4";
 
-    CRM_Core_DAO::executeQuery(
-      $sql,
-      [
-        1 => [$addressDetails, 'String'],
-        2 => [$postCode, 'String'],
-        3 => [$rowId, 'Integer'],
-      ]
-    );
+    CRM_Core_DAO::executeQuery($sql, $queryParams);
   }
 }
 

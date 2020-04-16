@@ -152,11 +152,7 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
     return TRUE;
   }
 
-  public function upgrade_3105() {
-    return TRUE;
-  }
-
-  public function upgrade_3106() {
+  public function upgrade_3107() {
     $this->log('Updating custom fields');
     $this->setCustomFields();
     return TRUE;
@@ -191,8 +187,8 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
   }
 
   private function getCustomFields() {
-    $optionGroups = $this->getOptionGroups();
     $customFields = [
+      // Gift Aid on Contribution
       'Eligible_for_Gift_Aid' => [
         'custom_group_id' => 'Gift_Aid',
         'name' => 'Eligible_for_Gift_Aid',
@@ -207,7 +203,47 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
         'column_name' => 'eligible_for_gift_aid',
         'option_group_id' => 'uk_taxpayer_options',
         'in_selector' => '0'
-      ]
+      ],
+
+      // Gift Aid declaration
+      [
+        'custom_group_id' => 'Gift_Aid_Declaration',
+        'name' => 'Address',
+        'label' => 'Address',
+        'data_type' => 'Memo',
+        'html_type' => 'TextArea',
+        'is_required' => '0',
+        'is_searchable' => '1',
+        'is_search_range' => '0',
+        'weight' => '2',
+        'attributes' => 'rows=4, cols=60',
+        'is_active' => '1',
+        'is_view' => '0',
+        'text_length' => '255',
+        'note_columns' => '60',
+        'note_rows' => '4',
+        'column_name' => 'address',
+        'in_selector' => '0',
+        'help_pre' => 'The address and post code are automatically copied from the contact\'s "Home" address and formatted for submission to HMRC. You don\'t normally need to make any changes here.',
+      ],
+      [
+        'custom_group_id' => 'Gift_Aid_Declaration',
+        'name' => 'Post_Code',
+        'label' => 'Post Code',
+        'data_type' => 'String',
+        'html_type' => 'Text',
+        'is_required' => '0',
+        'is_searchable' => '1',
+        'is_search_range' => '0',
+        'weight' => '3',
+        'is_active' => '1',
+        'is_view' => '0',
+        'text_length' => '16',
+        'note_columns' => '60',
+        'note_rows' => '4',
+        'column_name' => 'post_code',
+        'in_selector' => '0',
+      ],
     ];
     return $customFields;
   }

@@ -2,10 +2,10 @@
 
 function civicrm_api3_gift_aid_makepastyearsubmissions($params) {
   // get all contacts with declarations
-  $contacts = CRM_Civigiftaid_Utils_GiftAid::getContactsWithDeclarations();
+  $contacts = CRM_Civigiftaid_Declaration::getContactsWithDeclarations();
 
   // get current declarations of contacts
-  $currentDeclarations = CRM_Civigiftaid_Utils_GiftAid::getCurrentDeclarations($contacts);
+  $currentDeclarations = CRM_Civigiftaid_Declaration::getCurrentDeclarations($contacts);
 
   // get current declarations which has "past 4 year" option
   $currentWithPastYearOption = [];
@@ -18,15 +18,15 @@ function civicrm_api3_gift_aid_makepastyearsubmissions($params) {
 
   // select all contributions which are not submissions and with eligible financial type
   $contributionsToSubmit =
-          CRM_Civigiftaid_Utils_GiftAid::getContributionsByDeclarations($currentWithPastYearOption, 100);
+    CRM_Civigiftaid_Utils_Contribution::getContributionsByDeclarations($currentWithPastYearOption, 100);
 
   // make submissions
   if(!empty($contributionsToSubmit)) {
     foreach($contributionsToSubmit as $contribution) {
       $submission['entity_id'] = $contribution['contribution_id'];
-      $submission['eligible_for_gift_aid'] = 3;
+      $submission['eligible_for_gift_aid'] = CRM_Civigiftaid_Declaration::DECLARATION_IS_PAST_4_YEARS;
 
-      CRM_Civigiftaid_Utils_GiftAid::setSubmission($submission);
+      CRM_Civigiftaid_Utils_Contribution::setSubmission($submission);
     }
 
   }
@@ -75,14 +75,14 @@ function civicrm_api3_gift_aid_updateeligiblecontributions($params) {
       unset($contributions[$key]);
       continue;
     }
-    if (!CRM_Civigiftaid_Utils_GiftAid::isEligibleForGiftAid($contribution)) {
+    if (!CRM_Civigiftaid_Utils_Contribution::isEligibleForGiftAid($contribution)) {
       unset($contributions[$key]);
       continue;
     }
 
     // This must be an eligible contribution - update it
     // We don't touch batchName
-    CRM_Civigiftaid_Utils_Contribution::updateGiftAidFields($contribution['id'], CRM_Civigiftaid_Utils_GiftAid::DECLARATION_IS_YES, NULL);
+    CRM_Civigiftaid_Utils_Contribution::updateGiftAidFields($contribution['id'], CRM_Civigiftaid_Declaration::DECLARATION_IS_YES, NULL);
     $updatedIDs[$contribution['id']] = 1;
   }
   return civicrm_api3_create_success($updatedIDs, $params, 'gift_aid', 'updateeligiblecontributions');

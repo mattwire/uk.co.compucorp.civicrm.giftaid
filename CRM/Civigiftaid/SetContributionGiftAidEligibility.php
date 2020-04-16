@@ -9,7 +9,6 @@
  +--------------------------------------------------------------------+
  */
 
-use CRM_Civigiftaid_Utils_GiftAid as GiftAidUtil;
 use CRM_Civigiftaid_ExtensionUtil as E;
 
 /**
@@ -30,7 +29,7 @@ class CRM_Civigiftaid_SetContributionGiftAidEligibility {
     if (($event->entity !== 'Contribution') || !in_array($event->action, ['create', 'edit'])) {
       return;
     }
-    self::setGiftAidEligibilityStatus($event->id);
+    self::setGiftAidEligibilityStatus($event->id, $event->action);
   }
 
   /**
@@ -45,11 +44,13 @@ class CRM_Civigiftaid_SetContributionGiftAidEligibility {
    *
    * @param int $contributionID
    *   Contribution Id.
+   * @param string $action
+   *   The action - eg. create/edit
    *
    * @throws \CRM_Extension_Exception
    * @throws \CiviCRM_API3_Exception
    */
-  private static function setGiftAidEligibilityStatus($contributionID) {
+  private static function setGiftAidEligibilityStatus($contributionID, $action) {
     $contributionEligibleGiftAidFieldName = CRM_Civigiftaid_Utils::getCustomByName('Eligible_For_Gift_Aid', 'Gift_Aid');
     $contributionBatchNameFieldName = CRM_Civigiftaid_Utils::getCustomByName('batch_name', 'Gift_Aid');
     $contribution = civicrm_api3('Contribution', 'getsingle', [
@@ -57,8 +58,9 @@ class CRM_Civigiftaid_SetContributionGiftAidEligibility {
       'return' => [
         'financial_type_id',
         'contact_id',
+        'contribution_recur_id',
         $contributionEligibleGiftAidFieldName,
-        $contributionBatchNameFieldName
+        $contributionBatchNameFieldName,
       ]
     ]);
 
@@ -77,14 +79,20 @@ class CRM_Civigiftaid_SetContributionGiftAidEligibility {
       }
 
       $contributionContact = $contribution['contact_id'];
-      if (!GiftAidUtil::getDeclaration($contributionContact) && $eligibility === 1) {
+      if (!CRM_Civigiftaid_Declaration::getDeclaration($contributionContact) && $eligibility === 1) {
         CRM_Core_Session::setStatus(self::getMissingGiftAidDeclarationMessage($contributionContact), E::ts('Gift Aid Declaration'), 'success');
       }
     }
 
     // Now update the giftaid fields on the contribution and (re-)do calculations for amounts.
-    // This will not touch the contribution if it is part of a batch
-    CRM_Civigiftaid_Utils_Contribution::updateGiftAidFields($contributionID, $eligibility, $contribution[$contributionBatchNameFieldName]);
+    if (!empty($contribution['contribution_recur_id']) && ($action === 'create')) {
+      // As it is a copy of a contribution we need to clear the batch name field
+      CRM_Civigiftaid_Utils_Contribution::updateGiftAidFields($contributionID, $eligibility, '', TRUE);
+    }
+    else {
+      // This will not touch the contribution if it is part of a batch
+      CRM_Civigiftaid_Utils_Contribution::updateGiftAidFields($contributionID, $eligibility, $contribution[$contributionBatchNameFieldName]);
+    }
   }
 
   /**

@@ -89,6 +89,54 @@ function civigiftaid_civicrm_alterSettingsFolders(&$metaDataFolders = NULL) {
 }
 
 /**
+ * Add navigation for GiftAid under "Administer/CiviContribute" menu
+ *
+ * @param array $menu
+ *
+ * @throws \CiviCRM_API3_Exception
+ */
+function civigiftaid_civicrm_navigationMenu(&$menu) {
+  // Get optionvalue ID for basic rate tax setting
+  $result = civicrm_api3('OptionValue', 'getsingle', ['name' => 'basic_rate_tax']);
+  if ($result['id']) {
+    $ovId = $result['id'];
+    $ogId = $result['option_group_id'];
+  }
+
+  $item[] =  [
+    'label' => E::ts('GiftAid'),
+    'name'       => 'admin_giftaid',
+    'url'        => NULL,
+    'permission' => 'access CiviContribute',
+    'operator'   => NULL,
+    'separator'  => 1,
+  ];
+  _civigiftaid_civix_insert_navigation_menu($menu, 'Administer/CiviContribute', $item[0]);
+
+  $item[] = [
+    'label' => E::ts('GiftAid Basic Rate Tax'),
+    'name'       => 'giftaid_basic_rate_tax',
+    'url'        => "civicrm/admin/options?action=update&id=$ovId&gid=$ogId&reset=1",
+    'permission' => 'access CiviContribute',
+    'operator'   => NULL,
+    'separator'  => NULL,
+  ];
+  _civigiftaid_civix_insert_navigation_menu($menu, 'Administer/CiviContribute/admin_giftaid', $item[1]);
+
+  $item[] = [
+    'label'      => E::ts('Settings'),
+    'name'       => 'settings',
+    'url'        => "civicrm/admin/giftaid/settings",
+    'permission' => 'access CiviContribute',
+    'operator'   => NULL,
+    'separator'  => NULL,
+  ];
+  _civigiftaid_civix_insert_navigation_menu($menu, 'Administer/CiviContribute/admin_giftaid', $item[2]);
+
+  _civigiftaid_civix_navigationMenu($menu);
+}
+
+/**
  * @param $objectType
  * @param $tasks
  */
@@ -130,6 +178,11 @@ function civigiftaid_civicrm_buildForm($formName, &$form) {
  * Implementation of hook_civicrm_postProcess
  * To copy the contact's home address to the declaration, when the declaration is created
  * Only for offline contribution
+ *
+ * @param string $formName
+ * @param \CRM_Core_Form $form
+ *
+ * @throws \CiviCRM_API3_Exception
  */
 function civigiftaid_civicrm_postProcess($formName, &$form) {
   // Get and store the gift aid declaration value if set for use in civigiftaid_update_declaration_amount
@@ -137,6 +190,12 @@ function civigiftaid_civicrm_postProcess($formName, &$form) {
     $ukTaxPayerField = CRM_Civigiftaid_Utils::getCustomByName('eligible_for_gift_aid', 'Gift_Aid_Declaration');
     if (isset($form->_submitValues[$ukTaxPayerField])) {
       Civi::$statics[E::LONG_NAME]['uktaxpayer'] = $form->_submitValues[$ukTaxPayerField];
+    }
+  }
+  // Get the title of the submitted form
+  if (!isset(Civi::$statics[E::LONG_NAME]['postProcessTitle'])) {
+    if ($form->getTitle()) {
+      Civi::$statics[E::LONG_NAME]['postProcessTitle'] = $form->getTitle();
     }
   }
 
@@ -160,7 +219,7 @@ function civigiftaid_civicrm_postProcess($formName, &$form) {
     $rowId = CRM_Core_DAO::singleValueQuery($sql, $params);
 
     // Get the home address of the contact
-    list($addressDetails, $postCode) = _civigiftaid_civicrm_custom_get_address_and_postal_code($contactId, 1);
+    list($addressDetails, $postCode) = CRM_Civigiftaid_Declaration::getAddressAndPostalCode($contactId);
 
     $sql = "
       UPDATE {$customGroupTableName}
@@ -179,63 +238,6 @@ function civigiftaid_civicrm_postProcess($formName, &$form) {
   }
 }
 
-function civigiftaid_update_declaration_amount($contributionID, $op) {
-  $contributionCustomGiftAidEligibleFieldName = CRM_Civigiftaid_Utils::getCustomByName('Eligible_for_Gift_Aid', 'Gift_Aid');
-  $contributionCustomGiftAidBatchNameFieldName = CRM_Civigiftaid_Utils::getCustomByName('Batch_Name', 'Gift_Aid');
-
-  $contribution = civicrm_api3('Contribution', 'getsingle', [
-    'id' => $contributionID,
-    'return' => ['contact_id',
-      'receive_date',
-      $contributionCustomGiftAidEligibleFieldName,
-      $contributionCustomGiftAidBatchNameFieldName,
-      'contribution_recur_id'
-    ]
-  ]);
-
-  if (!empty($contribution['contribution_recur_id']) && ($op === 'create')) {
-    $contribution[$contributionCustomGiftAidBatchNameFieldName] = '';
-  }
-
-  // Don't touch gift aid fields if already part of a batch
-  if (!empty($contribution[$contributionCustomGiftAidBatchNameFieldName])) {
-    return;
-  }
-
-  // If declaration updated via contribution page etc. it will have been set in postProcess
-  if (isset(Civi::$statics[E::LONG_NAME]['uktaxpayer'])) {
-    $contactGiftAidEligibleStatus = Civi::$statics[E::LONG_NAME]['uktaxpayer'];
-  }
-  else {
-    $contactGiftAidEligibleStatus = CRM_Civigiftaid_Utils_GiftAid::isEligibleForGiftAid($contribution);
-  }
-  $contributionGiftAidEligibleStatus = $contribution[$contributionCustomGiftAidEligibleFieldName];
-
-  // Get the gift aid eligible status
-  // If it's not a valid number don't do any further processing
-  if (!$contactGiftAidEligibleStatus) {
-    return;
-  }
-
-  // We could specify both declaration + contribution fields on the profile, so you could sign a declaration but say this contribution is not eligible for example.
-  if (!$contributionGiftAidEligibleStatus) {
-    $contributionGiftAidEligibleStatus = $contactGiftAidEligibleStatus;
-  }
-
-  list($addressDetails, $postCode) = _civigiftaid_civicrm_custom_get_address_and_postal_code($contribution['contact_id'], 1);
-
-  $params = [
-    'entity_id'             => $contribution['contact_id'],
-    'start_date'            => CRM_Utils_Date::isoToMysql($contribution['receive_date']),
-    'address'               => $addressDetails,
-    'post_code'             => $postCode,
-  ];
-  CRM_Civigiftaid_Utils_GiftAid::setDeclaration($params);
-  if ($contactGiftAidEligibleStatus) {
-    CRM_Civigiftaid_Utils_Contribution::updateGiftAidFields($contributionID, $contributionGiftAidEligibleStatus);
-  }
-}
-
 /**
  * If a contribution is created/edited create/edit the slave contributions
  * @param $op
@@ -243,37 +245,46 @@ function civigiftaid_update_declaration_amount($contributionID, $op) {
  * @param $objectId
  * @param $objectRef
  *
+ * @throws \CRM_Core_Exception
+ * @throws \CRM_Extension_Exception
  * @throws \CiviCRM_API3_Exception
  */
 function civigiftaid_civicrm_post($op, $objectName, $objectId, &$objectRef) {
-  switch ($objectName) {
-    case 'Contribution':
-      if ($op == 'edit' || $op == 'create') {
+  if ($objectName !== 'Contribution') {
+    return;
+  }
 
-        $callbackParams = [
-          'entity' => $objectName,
-          'op' => $op,
-          'id' => $objectId,
-          'details' => $objectRef,
-        ];
-        if (CRM_Core_Transaction::isActive()) {
-          CRM_Core_Transaction::addCallback(CRM_Core_Transaction::PHASE_POST_COMMIT, 'civigiftaid_callback_civicrm_post_contribution', [$callbackParams]);
-        }
-        else {
-          civigiftaid_callback_civicrm_post_contribution($callbackParams);
-        }
-      }
-      break;
-
+  if ($op == 'edit' || $op == 'create') {
+    $callbackParams = [
+      'entity' => $objectName,
+      'op' => $op,
+      'id' => $objectId,
+      'details' => $objectRef,
+    ];
+    if (CRM_Core_Transaction::isActive()) {
+      CRM_Core_Transaction::addCallback(CRM_Core_Transaction::PHASE_POST_COMMIT, 'civigiftaid_callback_civicrm_post_contribution', [$callbackParams]);
+    }
+    else {
+      civigiftaid_callback_civicrm_post_contribution($callbackParams);
+    }
   }
 }
 
+/**
+ * Callback for hook_civicrm_post_contribution
+ *
+ * @param array $params
+ *
+ * @throws \CRM_Core_Exception
+ * @throws \CRM_Extension_Exception
+ * @throws \CiviCRM_API3_Exception
+ */
 function civigiftaid_callback_civicrm_post_contribution($params) {
   if (isset(Civi::$statics[E::LONG_NAME]['updatedDeclarationAmount'])) {
     return;
   }
   Civi::$statics[E::LONG_NAME]['updatedDeclarationAmount'] = TRUE;
-  civigiftaid_update_declaration_amount($params['id'], $params['op']);
+  CRM_Civigiftaid_Declaration::update($params['id']);
 }
 
 /**
@@ -377,11 +388,11 @@ function civigiftaid_civicrm_validateForm($formName, &$fields, &$files, &$form, 
       }
 
       // Check if the contact has a home address
-      foreach ($declarations as $id3 => $values3) {
+      foreach ($declarations as $values3) {
         $address = civicrm_api3("Address", "get",
           [
-            'contact_id'       => $contactID,
-            'location_type_id' => 1
+            'contact_id' => $contactID,
+            'location_type_id' => CRM_Civigiftaid_Declaration::getAddressLocationID(),
           ]
         );
         if ($address['count'] == 0) {
@@ -396,125 +407,3 @@ function civigiftaid_civicrm_validateForm($formName, &$fields, &$files, &$form, 
     return $errors;
   }
 }
-
-/**
- * Add navigation for GiftAid under "Administer/CiviContribute" menu
- */
-function civigiftaid_civicrm_navigationMenu(&$menu) {
-  // Get optionvalue ID for basic rate tax setting
-  $result = civicrm_api3('OptionValue', 'getsingle', ['name' => 'basic_rate_tax']);
-  if ($result['id']) {
-    $ovId = $result['id'];
-    $ogId = $result['option_group_id'];
-  }
-
-  $item[] =  [
-    'label' => E::ts('GiftAid'),
-    'name'       => 'admin_giftaid',
-    'url'        => NULL,
-    'permission' => 'access CiviContribute',
-    'operator'   => NULL,
-    'separator'  => 1,
-  ];
-  _civigiftaid_civix_insert_navigation_menu($menu, 'Administer/CiviContribute', $item[0]);
-
-  $item[] = [
-    'label' => E::ts('GiftAid Basic Rate Tax'),
-    'name'       => 'giftaid_basic_rate_tax',
-    'url'        => "civicrm/admin/options?action=update&id=$ovId&gid=$ogId&reset=1",
-    'permission' => 'access CiviContribute',
-    'operator'   => NULL,
-    'separator'  => NULL,
-  ];
-  _civigiftaid_civix_insert_navigation_menu($menu, 'Administer/CiviContribute/admin_giftaid', $item[1]);
-
-  $item[] = [
-    'label'      => E::ts('Settings'),
-    'name'       => 'settings',
-    'url'        => "civicrm/admin/giftaid/settings",
-    'permission' => 'access CiviContribute',
-    'operator'   => NULL,
-    'separator'  => NULL,
-  ];
-  _civigiftaid_civix_insert_navigation_menu($menu, 'Administer/CiviContribute/admin_giftaid', $item[2]);
-
-  _civigiftaid_civix_navigationMenu($menu);
-}
-
-/**
- * Function to get full address and postal code for a contact
- */
-function _civigiftaid_civicrm_custom_get_address_and_postal_code($contactId, $location_type_id = 1) {
-  if (empty($contactId)) {
-    // @fixme Maybe this should throw an exception as it's unclear what happens if we don't have a contact ID here
-    return ['', ''];
-  }
-
-  $fullFormattedAddress = $postalCode = '';
-
-  // get Address & Postal Code of the contact
-  $address = civicrm_api3("Address", "get", [
-    'contact_id'       => $contactId,
-    'location_type_id' => $location_type_id
-  ]);
-  if ($address['count'] > 0) {
-    if (!isset($address['id'])) { //check if the contact has more than one home address so use the first one
-      $addressValue = array_shift(array_values($address['values']));
-      $postalCode = CRM_Utils_Array::value('postal_code', $addressValue, '');
-    }
-    else {
-      $addressValue = $address['values'][$address['id']];
-      $postalCode = CRM_Utils_Array::value('postal_code', $address['values'][$address['id']], '');
-    }
-    $fullFormattedAddress =
-      _civigiftaid_civicrm_custom_get_address_and_postal_code_format_address($addressValue);
-
-  }
-
-  return [$fullFormattedAddress, $postalCode];
-}
-
-/**
- * Function to format the address , to avoid empty spaces or commas
- */
-function _civigiftaid_civicrm_custom_get_address_and_postal_code_format_address(
-  $contactAddress
-) {
-  if (!is_array($contactAddress)) {
-    return 'NULL';
-  }
-  $tempAddressArray = [];
-  if (isset($contactAddress['address_name'])
-    AND $contactAddress['address_name']
-  ) {
-    $tempAddressArray[] = $contactAddress['address_name'];
-  }
-  if (isset($contactAddress['street_address'])
-    AND $contactAddress['street_address']
-  ) {
-    $tempAddressArray[] = $contactAddress['street_address'];
-  }
-  if (isset($contactAddress['supplemental_address_1'])
-    AND $contactAddress['supplemental_address_1']
-  ) {
-    $tempAddressArray[] = $contactAddress['supplemental_address_1'];
-  }
-  if (isset($contactAddress['supplemental_address_2'])
-    AND $contactAddress['supplemental_address_2']
-  ) {
-    $tempAddressArray[] = $contactAddress['supplemental_address_2'];
-  }
-  if (isset($contactAddress['city']) AND $contactAddress['city']) {
-    $tempAddressArray[] = $contactAddress['city'];
-  }
-  if (isset($contactAddress['state_province_id'])
-    AND $contactAddress['state_province_id']
-  ) {
-    $tempAddressArray[] = CRM_Core_PseudoConstant::stateProvince(
-      $contactAddress['state_province_id']
-    );
-  }
-
-  return implode(', ', $tempAddressArray);
-}
-

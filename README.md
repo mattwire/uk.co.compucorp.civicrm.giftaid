@@ -6,15 +6,13 @@ The extension is licensed under [AGPL-3.0](LICENSE.txt).
 
 ## Requirements
 
-* PHP v7.1+
-* CiviCRM 5.19+
+* PHP v7.2+
+* CiviCRM 5.24+
 
 ## Changes
 
 This (MJW) version automatically calculates the gift-aid amount when the contribution is created/updated. It updates the code
 to meet current CiviCRM Coding standards and improves performance significantly.
-
-This extension is currently "equivalent" to https://github.com/compucorp/uk.co.compucorp.civicrm.giftaid/releases/tag/3.1.0 (all changes have been reviewed and merged if appropriate).
 
 ## Installation
 
@@ -25,4 +23,4 @@ Documentation: [docs/index.md](/docs/index.md)
 
 CiviCRM Extension Page: https://civicrm.org/extensions/gift-aid-extension-uk
 
-Please see info.xml for support information.
+For online submission directly to HMRC see https://github.com/mattwire/uk.co.vedaconsulting.module.giftaidonline which works with this extension.

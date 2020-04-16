@@ -65,7 +65,7 @@ class CRM_Civigiftaid_Utils_Contribution {
       }
 
       // check if contribution is valid for gift aid
-      if (CRM_Civigiftaid_Utils_GiftAid::isEligibleForGiftAid($contribution)
+      if (self::isEligibleForGiftAid($contribution)
         && ($contribution['contribution_status_id'] == CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Completed'))
       ) {
         civicrm_api3('EntityBatch', 'create', [
@@ -103,6 +103,7 @@ class CRM_Civigiftaid_Utils_Contribution {
    * @param int $contributionID
    * @param int $eligibleForGiftAid - if this is NULL if will NOT be set, otherwise set it to eg CRM_Civigiftaid_Utils_GiftAid::DECLARATION_IS_YES
    * @param string $batchName - if this is set to NULL it will NOT be changed
+   * @param bool $addToBatch - You must set this to TRUE to modify the batchName
    *
    * @throws \CRM_Extension_Exception
    * @throws \CiviCRM_API3_Exception
@@ -379,7 +380,7 @@ class CRM_Civigiftaid_Utils_Contribution {
       if (!empty($contribution[CRM_Civigiftaid_Utils::getCustomByName('batch_name', $groupID)])) {
         $contributionsAlreadyAdded[] = $contribution['id'];
       }
-      elseif (CRM_Civigiftaid_Utils_GiftAid::isEligibleForGiftAid($contribution)
+      elseif (self::isEligibleForGiftAid($contribution)
         && ($contribution['contribution_status_id'] == CRM_Core_PseudoConstant::getKey('CRM_Contribute_BAO_Contribution', 'contribution_status_id', 'Completed'))
       ) {
         $contributionsAdded[] = $contribution['id'];
@@ -569,6 +570,194 @@ class CRM_Civigiftaid_Utils_Contribution {
       return $contributionAmt;
     }
     return self::getContribAmtForEnabledFinanceTypes($contributionID);
+  }
+
+  /**
+   * @param array $contribution
+   *
+   * @return bool
+   * @throws \CiviCRM_API3_Exception
+   */
+  public static function isEligibleForGiftAid($contribution) {
+    $isContributionEligible = self::isContributionEligible($contribution);
+
+    // hook can alter the eligibility if needed
+    CRM_Civigiftaid_Utils_Hook::giftAidEligible($isContributionEligible, $contribution['contact_id'], $contribution['receive_date'], $contribution['id']);
+    return $isContributionEligible;
+  }
+
+  /**
+   * @param array $declarations
+   * @param int $limit
+   *
+   * @return array
+   * @throws \CiviCRM_API3_Exception
+   */
+  public static function getContributionsByDeclarations($declarations = [], $limit = 100) {
+    $contributionsToSubmit = [];
+
+    foreach ($declarations as $declaration) {
+      $dateRange = [];
+
+      $contactId = $declaration['entity_id'];
+      $startDate = $declaration['start_date'];
+      $dateRange[0] = self::dateFourYearsAgo($startDate);
+      $dateRange[1] = $startDate;
+      $contributions = self::getContributionsByDateRange($contactId, $dateRange);
+      $contributionsToSubmit = array_merge($contributions, $contributionsToSubmit);
+
+      if (count($contributionsToSubmit) >= $limit) {
+        $contributionsToSubmit = array_slice($contributionsToSubmit, 0, $limit);
+        break;
+      }
+    }
+    return $contributionsToSubmit;
+  }
+
+  /**
+   * @param int $contactId
+   * @param string $dateRange
+   *
+   * @return mixed
+   * @throws \CiviCRM_API3_Exception
+   */
+  public static function getContributionsByDateRange($contactId, $dateRange) {
+    if ((bool) CRM_Civigiftaid_Settings::getValue('globally_enabled')) {
+      $result = civicrm_api3('Contribution', 'get', [
+        'sequential' => 1,
+        'return' => "financial_type_id,id",
+        'contact_id' => $contactId,
+        'id' => ['NOT IN' => self::submittedContributions()],
+        'receive_date' => ['BETWEEN' => $dateRange],
+      ]);
+    }
+    else {
+      if ($financialTypes = (array) CRM_Civigiftaid_Settings::getValue('financial_types_enabled')) {
+        $result = civicrm_api3('Contribution', 'get', [
+          'sequential' => 1,
+          'return' => "financial_type_id,id",
+          'contact_id' => $contactId,
+          'financial_type_id' => $financialTypes,
+          'id' => ['NOT IN' => self::submittedContributions()],
+          'receive_date' => ['BETWEEN' => $dateRange],
+        ]);
+      }
+    }
+    return $result['values'];
+  }
+
+  /**
+   * @return array
+   */
+  public static function submittedContributions() {
+    $submittedContributions = [];
+    $sql = "
+        SELECT entity_id
+        FROM   civicrm_value_gift_aid_submission";
+
+    $dao = CRM_Core_DAO::executeQuery($sql);
+    foreach ($dao->fetchAll() as $row) {
+      $submittedContributions[] = $row['entity_id'];
+    }
+
+    return $submittedContributions;
+  }
+
+  /**
+   * Check if Eligibility criteria for Contribution is met.
+   *
+   * @param array $contribution
+   *
+   * @return bool
+   * @throws \CiviCRM_API3_Exception
+   */
+  public static function isContributionEligible($contribution) {
+    $declarations = CRM_Civigiftaid_Declaration::getAllDeclarations($contribution['contact_id']);
+    if (empty($declarations)) {
+      return FALSE;
+    }
+
+    $eligibleAmount = $contribution[CRM_Civigiftaid_Utils::getCustomByName('Amount', 'Gift_Aid')];
+    if (!empty($eligibleAmount) && ($eligibleAmount == 0)) {
+      // Contribution has 0 eligible amount.
+      return FALSE;
+    }
+    $isEligible = $contribution[CRM_Civigiftaid_Utils::getCustomByName('Eligible_for_Gift_Aid', 'Gift_Aid')];
+    if (!empty($isEligible) && ($isEligible == 0)) {
+      // Contribution marked as not eligible
+      return FALSE;
+    };
+    // If it is not set ('') it's not the same as DECLARATION_IS_NO
+    if (!empty($contributionEligible) && ($contributionEligible == CRM_Civigiftaid_Declaration::DECLARATION_IS_NO)) {
+      return FALSE;
+    }
+
+    foreach ($declarations as $declaration) {
+      if ($declaration['eligible_for_gift_aid'] == CRM_Civigiftaid_Declaration::DECLARATION_IS_PAST_4_YEARS) {
+        $declaration['start_date'] = self::dateFourYearsAgo($declaration['start_date']);
+      }
+
+      // Convert dates to timestamps.
+      $startDateTS = strtotime(date('Ymd 00:00:00', strtotime($declaration['start_date'])));
+      $endDateTS = !empty($declaration['end_date']) ? strtotime(date('Ymd 00:00:00', strtotime($declaration['end_date']))) : NULL;
+      $contributionDateTS = strtotime($contribution['receive_date']);
+
+      /**
+       * Check between which date the contribution's receive date falls.
+       */
+      if (!empty($endDateTS)) {
+        $contributionDeclarationDateMatchFound =
+          ($contributionDateTS >= $startDateTS) && ($contributionDateTS < $endDateTS);
+      }
+      else {
+        $contributionDeclarationDateMatchFound = ($contributionDateTS >= $startDateTS);
+      }
+
+      if ($contributionDeclarationDateMatchFound == TRUE) {
+        return ((bool) $declaration['eligible_for_gift_aid']);
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * @param array $params
+   */
+  public static function setSubmission($params) {
+    $sql = "SELECT * FROM civicrm_value_gift_aid_submission where entity_id = %1";
+    $sqlParams = [1 => [$params['entity_id'], 'Integer']];
+    $dao = CRM_Core_DAO::executeQuery($sql, $sqlParams);
+    $count = count($dao->fetchAll());
+    if ($count == 0) {
+      // Insert
+      $sql = "
+        INSERT INTO civicrm_value_gift_aid_submission (entity_id, eligible_for_gift_aid, amount, gift_aid_amount, batch_name)
+        VALUES (%1, %2, NULL, NULL, NULL)";
+    }
+    else {
+      // Update
+      $sql = "
+        UPDATE civicrm_value_gift_aid_submission
+        SET eligible_for_gift_aid = %2
+        WHERE entity_id = %1";
+    }
+    $queryParams = [
+      1 => [$params['entity_id'], 'Integer'],
+      2 => [$params['eligible_for_gift_aid'], 'Integer'],
+    ];
+    CRM_Core_DAO::executeQuery($sql, $queryParams);
+  }
+
+  /**
+   * @param string $startDate
+   *
+   * @return string
+   * @throws \Exception
+   */
+  public static function dateFourYearsAgo($startDate) {
+    $date = new DateTime($startDate);
+    $dateFourYearsAgo = $date->modify('-4 year')->format('Y-m-d H:i:s');
+    return $dateFourYearsAgo;
   }
 
 }

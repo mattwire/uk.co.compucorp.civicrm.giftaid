@@ -1,3 +1,7 @@
+## Release 3.3.8
+
+* Refactor GiftAid report to fix multiple issues and show batches with multiple financial types.
+
 ## Release 3.3.7
 
 * Allow editing address on the declaration.

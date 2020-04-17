@@ -16,8 +16,8 @@
     <author>MJW Consulting, Erawat Chamanont, Jamie Novick, Guanhuan Chen, Robin Mitra</author>
     <email>mjw@mjwconsult.co.uk, jamie@compucorp.co.uk, guanhuan@compucorp.co.uk</email>
   </maintainer>
-  <releaseDate>2020-04-16</releaseDate>
-  <version>3.3.7</version>
+  <releaseDate>2020-04-17</releaseDate>
+  <version>3.3.8</version>
   <develStage>beta</develStage>
   <compatibility>
     <ver>5.24</ver>

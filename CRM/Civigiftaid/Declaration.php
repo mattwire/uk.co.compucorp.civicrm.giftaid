@@ -548,4 +548,137 @@ class CRM_Civigiftaid_Declaration {
     return $params;
   }
 
+  /**
+   * Returns the contact name in a format accepted by HMRC.
+   * Each Name must be 1-35 characters Alphabetic including the single quote, dot, and hyphen symbol.
+   * First name cannot have spaces
+   *
+   * @param string $firstName
+   * @param string $lastName
+   *
+   * @return array [[firstname,lastname], errors]
+   * @throws \CiviCRM_API3_Exception
+   */
+  public static function getFilteredDonorName($firstName, $lastName) {
+    $errors = [];
+    if (empty($firstName)) {
+      $errors[] = 'First name cannot be empty.';
+    }
+    if (empty($lastName)) {
+      $errors[] = 'Last name cannot be empty.';
+    }
+
+    $contactName = [];
+    if (empty($errors)) {
+      $currentLocale = setlocale(LC_CTYPE, 0);
+      setlocale(LC_CTYPE, "en_GB.utf8");
+      $nameParts = [
+        $firstName => "/[^A-Za-z'.-]/",
+        $lastName => "/[^A-Za-z '.-]/"
+      ];
+      foreach ($nameParts as $name => $regex) {
+        $filteredName = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $name);
+        $filteredName = preg_replace($regex, '', $filteredName);
+        $contactName[] = substr($filteredName, 0, 35);
+      }
+      setlocale(LC_CTYPE, $currentLocale);
+    }
+
+    return [$contactName, $errors];
+  }
+
+  /**
+   * Return a formatted postcode
+   *
+   * @param string $postcode
+   *
+   * @return string
+   */
+  private static function getPostCode($postcode) {
+    // remove non alphanumeric characters
+    $cleanPostcode = preg_replace("/[^A-Za-z0-9]/", '', $postcode);
+    // make uppercase
+    $cleanPostcode = strtoupper($cleanPostcode);
+    // insert space
+    $postcode = substr($cleanPostcode, 0, -3) . " " . substr($cleanPostcode, -3);
+    return $postcode;
+  }
+
+  public static function getDonorAddress($p_contact_id, $p_contribution_id, $p_contribution_receive_date) {
+    $oSetting             = new CRM_Giftaidonline_Page_giftAidSubmissionSettings();
+    $sSource              = $oSetting->get_contribution_details_source();
+    $aAddress['id']       = NULL;
+    $aAddress['address']  = NULL;
+    $aAddress['postcode'] = NULL;
+    $aAddress['house_number'] = NULL;
+
+    $bGetAddressFromDeclaration = stristr($sSource, 'CONTRIBUTION') ? FALSE : TRUE;
+    if ($bGetAddressFromDeclaration) {
+      // We need to get the declaration that was current at the time that the contribution was made.
+      // Look for a declaration that:
+      //   - was eligible (ie. eligible_for_gift_aid is 1 or 3 and not 0).
+      //   - contribution receive date was between start and end date for declaration.
+      $sSql =<<<SQL
+              SELECT   id         AS id
+              ,        address    AS address
+              ,        post_code  AS postcode
+              FROM     civicrm_value_gift_aid_declaration
+              WHERE    entity_id  =  %1
+              AND      start_date <= %2
+              AND      (end_date IS NULL OR end_date >= %2)
+              AND      eligible_for_gift_aid > 0
+              ORDER BY start_date ASC
+              LIMIT  1
+SQL;
+      $aParams = [
+        1 => [$p_contact_id, 'Integer'],
+        2 => [$p_contribution_receive_date, 'Timestamp']
+      ];
+    } else {
+      $sSql =<<<SQL
+              SELECT   id        AS id
+              ,        address   AS address
+              ,        post_code AS postcode
+              FROM     civicrm_value_gift_aid_submission
+              WHERE    entity_id = %1
+              LIMIT  1
+SQL;
+      $aParams = [1 => [$p_contribution_id, 'Integer']];
+    }
+    $oDao = CRM_Core_DAO::executeQuery( $sSql
+      , $aParams
+      , $abort         = TRUE
+      , $daoName       = NULL
+      , $freeDAO       = FALSE
+      , $i18nRewrite   = TRUE
+      , $trapException = TRUE /* This must be explicitly set to TRUE for the code below to handle any Exceptions */
+    );
+    if (!(is_a($oDao, 'DB_Error'))) {
+      if ($oDao->fetch()) {
+        $aAddress['id']       = $oDao->id;
+        $aAddress['address']  = $oDao->address;
+        $aAddress['house_number'] = self::getHouseNo($oDao->address);
+        $aAddress['postcode'] = self::getPostCode($oDao->postcode);
+      }
+    }
+
+    return $aAddress;
+  }
+
+  /**
+   * split the phrase by any number of commas or space characters,
+   * which include " ", \r, \t, \n and \f
+   * @param string $p_address_line
+   *
+   * @return string|null
+   */
+  private static function getHouseNo($p_address_line) {
+    $aAddress = preg_split("/[,\s]+/", $p_address_line);
+    if (empty($aAddress)) {
+      return NULL;
+    } else {
+      return $aAddress[0];
+    }
+  }
+
 }

@@ -2,16 +2,16 @@
 
 ## Manual method (spreadsheet)
 
-Create Report - After successfully creating a batch of contributions eligible for Gift Aid go to "Reports -> All Reports" and click "new report" which will bring you here
+This extension provides a **Gift Aid Report** template which provides all the information required for submitting to HMRC
+in the right formats.
 
-http://www.example.com/civicrm/report/template/list?reset=1
+- Special characters are removed from First name and Last name.
+- Address is formatted into "House name or number" and Postcode.
+- Amount fields do not have the currency symbol.
 
-1. Select UK GiftAid report option from the list and continue.
+If you don't have the report setup, go to *Administer->CiviReport->Create new report from template* and find the Gift Aid report.
 
-2. Select the name of the batch you have just created and click preview report.
-
-3. Once you are happy with your report you can save/print it and submit it to the HMRC.
-
+The report can be filtered by batch. Use the batch filter to select and then export to CSV.
 
 ## Automatic method (install Gift Aid online extension)
 

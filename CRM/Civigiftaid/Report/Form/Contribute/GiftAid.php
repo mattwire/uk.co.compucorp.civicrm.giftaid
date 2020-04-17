@@ -24,167 +24,106 @@ class CRM_Civigiftaid_Report_Form_Contribute_GiftAid extends CRM_Report_Form {
   private static $batches = [];
 
   public function __construct() {
-    $this->_columns =
-      [
-        'civicrm_entity_batch'   => [
-          'dao'     => 'CRM_Batch_DAO_EntityBatch',
-          'filters' =>
-            [
-              'batch_id' => [
-                'title'        => ts('Batch'),
-                'operatorType' => CRM_Report_Form::OP_MULTISELECT,
-                'options'      => CRM_Civigiftaid_Utils_Contribution::getBatchIdTitle('id desc'),
-                'type' => CRM_Utils_Type::T_INT,
-              ],
-            ],
-          'fields'  => [
-            'batch_id' => [
-              'name'       => 'batch_id',
-              'title'      => ts('Batch ID'),
-              'no_display' => TRUE,
-              'required'   => TRUE,
-            ]
+    $this->_columns = [
+      'civicrm_entity_batch' => [
+        'dao' => 'CRM_Batch_DAO_EntityBatch',
+        'filters' => [
+          'batch_id' => [
+            'title'        => ts('Batch'),
+            'operatorType' => CRM_Report_Form::OP_MULTISELECT,
+            'options'      => CRM_Civigiftaid_Utils_Contribution::getBatchIdTitle('id desc'),
+            'type' => CRM_Utils_Type::T_INT,
+          ],
+        ],
+        'fields' => [
+          'batch_id' => [
+            'name'       => 'batch_id',
+            'title'      => ts('Batch ID'),
+            'no_display' => TRUE,
+            'required'   => TRUE,
+          ]
+        ]
+      ],
+      'civicrm_contact' => [
+        'dao'    => 'CRM_Contact_DAO_Contact',
+        'fields' => [
+          'prefix_id' => [
+            'name'       => 'prefix_id',
+            'title'      => ts('Title'),
+            'no_display' => FALSE,
+            'required'   => TRUE,
+          ],
+          'first_name'      => [
+            'name'       => 'first_name',
+            'title'      => ts('First Name'),
+            'no_display' => FALSE,
+            'required'   => TRUE,
+          ],
+          'last_name'    => [
+            'name'       => 'last_name',
+            'title'      => ts('Last Name'),
+            'no_display' => FALSE,
+            'required'   => TRUE,
+          ],
+        ],
+      ],
+      'civicrm_contribution' => [
+        'dao' => 'CRM_Contribute_DAO_Contribution',
+        'fields' => [
+          'contribution_id' => [
+            'name' => 'id',
+            'title' => ts('Contribution ID'),
+            'required' => TRUE,
+          ],
+          'contact_id' => [
+            'name' => 'contact_id',
+            'title' => ts('Donor Name'),
+            'required' => TRUE,
+          ],
+          'receive_date' => [
+            'name' => 'receive_date',
+            'title' => ts('Donation Date'),
+            'type' => CRM_Utils_Type::T_STRING,
+            'required' => TRUE,
+          ],
+          'contribution_amount' => [
+            'name' => 'total_amount',
+            'title' => ts('Donation Amount'),
+            'type' => CRM_Utils_Type::T_INT,
+            'required' => TRUE,
           ]
         ],
-        'civicrm_contact'   =>
-          [
-            'dao'    => 'CRM_Contact_DAO_Contact',
-            'fields' => [
-              'prefix_id' => [
-                'name'       => 'prefix_id',
-                'title'      => ts('Title'),
-                'no_display' => FALSE,
-                'required'   => TRUE,
-              ],
-              'first_name'      => [
-                'name'       => 'first_name',
-                'title'      => ts('First Name'),
-                'no_display' => FALSE,
-                'required'   => TRUE,
-              ],
-              'last_name'    => [
-                'name'       => 'last_name',
-                'title'      => ts('Last Name'),
-                'no_display' => FALSE,
-                'required'   => TRUE,
-              ],
-            ],
+      ],
+      'civicrm_address' => [
+        'dao'      => 'CRM_Core_DAO_Address',
+        'grouping' => 'contact-fields',
+        'fields'   => [
+          'street_address'    => [
+            'name'       => 'street_address',
+            'title'      => ts('Street Address'),
+            'no_display' => FALSE,
+            'required'   => TRUE,
           ],
-        'civicrm_contribution'   =>
-          [
-            'dao'    => 'CRM_Contribute_DAO_Contribution',
-            'fields' => [
-              'contribution_id' => [
-                'name'       => 'id',
-                'title'      => ts('Payment No'),
-              ],
-              'contact_id'      => [
-                'name'       => 'contact_id',
-                'title'      => ts('Donor Name'),
-                'no_display' => FALSE,
-                'required'   => TRUE,
-              ],
-              'receive_date'    => [
-                'name'       => 'receive_date',
-                'title'      => ts('Donation Date'),
-                'type'       => CRM_Utils_Type::T_STRING,
-                'no_display' => FALSE,
-                'required'   => TRUE,
-              ],
-            ],
+          'postal_code'       => [
+            'name'       => 'postal_code',
+            'title'      => ts('Postcode'),
+            'no_display' => FALSE,
+            'required'   => TRUE,
           ],
-        'civicrm_financial_type' =>
-          [
-            'dao'    => 'CRM_Financial_DAO_FinancialType',
-            'fields' => [
-              'financial_type_id' => [
-                'name'       => 'id',
-                'title'      => ts('Financial Type No'),
-                'no_display' => TRUE,
-                'required'   => TRUE,
-              ],
-            ],
-          ],
-        'civicrm_address'        =>
-          [
-            'dao'      => 'CRM_Core_DAO_Address',
-            'grouping' => 'contact-fields',
-            'fields'   =>
-              [
-                'street_address'    => [
-                  'name'       => 'street_address',
-                  'title'      => ts('Street Address'),
-                  'no_display' => FALSE,
-                  'required'   => TRUE,
-                ],
-                'city'              => [
-                  'name'       => 'city',
-                  'title'      => ts('City'),
-                ],
-                'state_province_id' => [
-                  'name'       => 'state_province_id',
-                  'title'      => ts('State/Province'),
-                ],
-                'country_id'        => [
-                  'name'       => 'country_id',
-                  'title' => ts('Country'),
-                ],
-                'postal_code'       => [
-                  'name'       => 'postal_code',
-                  'title'      => ts('Postcode'),
-                  'no_display' => FALSE,
-                  'required'   => TRUE,
-                ],
-              ],
-          ],
-        'civicrm_line_item'      =>
-          [
-            'dao'    => 'CRM_Price_DAO_LineItem',
-            'fields' => [
-              'id'           => [
-                'name'       => 'id',
-                'title'      => ts('Line Item No'),
-              ],
-              'amount'       => [
-                'name'       => 'line_total',
-                'title'      => ts('Amount'),
-                'no_display' => FALSE,
-                'required'   => TRUE,
-                // HMRC requires only number
-                //'type'       => CRM_Utils_Type::T_MONEY
-              ],
-              'quantity'     => [
-                'name'       => 'qty',
-                'title'      => ts('Quantity'),
-                'type'       => CRM_Utils_Type::T_INT
-              ],
-              'entity_table' => [
-                'name'       => 'entity_table',
-                'title'      => ts('Item'),
-              ],
-              'label'        => [
-                'name'       => 'label',
-                'title'      => ts('Description'),
-              ],
-            ],
-          ]
-      ];
+        ],
+      ],
+    ];
 
     parent::__construct();
 
     // set defaults
     if (is_array($this->_columns['civicrm_value_gift_aid_submission'])) {
-      foreach (
-        $this->_columns['civicrm_value_gift_aid_submission']['fields']
-        as $field => $values
-      ) {
-        if (in_array($this->_columns['civicrm_value_gift_aid_submission']['fields'][$field]['name'],
-          ['amount', 'gift_aid_amount'])) {
-          unset($this->_columns['civicrm_value_gift_aid_submission']['fields'][$field]);
-          continue;
+      foreach ($this->_columns['civicrm_value_gift_aid_submission']['fields'] as $field => $values) {
+        $this->_columns['civicrm_value_gift_aid_submission']['fields'][$field]['default'] = TRUE;
+        if ($values['dataType'] === 'Money') {
+          $this->_columns['civicrm_value_gift_aid_submission']['fields'][$field]['dataType'] = 'Integer';
+          $this->_columns['civicrm_value_gift_aid_submission']['fields'][$field]['type'] = CRM_Utils_Type::T_INT;
         }
-        $this->_columns['civicrm_value_gift_aid_submission']['fields'][$field]['default'] =
-          TRUE;
       }
     }
   }
@@ -254,9 +193,8 @@ class CRM_Civigiftaid_Report_Form_Contribute_GiftAid extends CRM_Report_Form {
       }
     }
 
-    $this->_columnHeaders['civicrm_line_item_gift_aid_amount'] = [
-      'title' => 'Gift Aid Amount',
-      //'type'  => CRM_Utils_Type::T_MONEY
+    $this->_columnHeaders['civicrm_address_house_number'] = [
+      'title' => 'House name or number',
     ];
 
     $this->reorderColumns();
@@ -272,48 +210,50 @@ class CRM_Civigiftaid_Report_Form_Contribute_GiftAid extends CRM_Report_Form {
         AND {$this->_aliases['civicrm_entity_batch']}.entity_id = {$this->_aliases['civicrm_contribution']}.id
       INNER JOIN civicrm_contact {$this->_aliases['civicrm_contact']}
       ON {$this->_aliases['civicrm_contribution']}.contact_id = {$this->_aliases['civicrm_contact']}.id
-      INNER JOIN civicrm_line_item {$this->_aliases['civicrm_line_item']}
-      ON {$this->_aliases['civicrm_contribution']}.id = {$this->_aliases['civicrm_line_item']}.contribution_id
-      INNER JOIN civicrm_financial_type {$this->_aliases['civicrm_financial_type']}
-      ON {$this->_aliases['civicrm_line_item']}.financial_type_id = {$this->_aliases['civicrm_financial_type']}.id
       LEFT JOIN civicrm_address {$this->_aliases['civicrm_address']}
       ON ({$this->_aliases['civicrm_contribution']}.contact_id = {$this->_aliases['civicrm_address']}.contact_id
-        AND {$this->_aliases['civicrm_address']}.is_primary = 1 )";
+        AND {$this->_aliases['civicrm_address']}.location_type_id = " . CRM_Civigiftaid_Declaration::getAddressLocationID() . ")";
   }
 
   public function where() {
+    $this->_whereClauses[] = "{$this->_aliases['civicrm_value_gift_aid_submission']}.amount IS NOT NULL";
+    $this->_whereClauses[] = "{$this->_aliases['civicrm_contact']}.contact_type = 'Individual'";
     parent::where();
-
-    if (empty($this->_where)) {
-      $this->_where =
-        "WHERE value_gift_aid_submission_civireport.amount IS NOT NULL";
-    }
-    else {
-      $this->_where .= " AND value_gift_aid_submission_civireport.amount IS NOT NULL";
-    }
   }
 
   public function statistics(&$rows) {
     $statistics = parent::statistics($rows);
 
-    $totalAmount = 0;
-    $totalGiftAidAmount = 0;
+    $totals = [
+      'contribution' => 0,
+      'eligibleAmount' => 0,
+      'giftAidAmount' => 0,
+    ];
+    $giftAidEligibleAmountField = 'civicrm_value_gift_aid_submission_' . CRM_Civigiftaid_Utils::getCustomByName('amount', 'Gift_Aid');
+    $giftAidAmountField = 'civicrm_value_gift_aid_submission_' . CRM_Civigiftaid_Utils::getCustomByName('gift_aid_amount', 'Gift_Aid');
 
     foreach ($rows as $row) {
-      $totalAmount += $row['civicrm_line_item_amount'];
-      $totalGiftAidAmount += $row['civicrm_line_item_gift_aid_amount'];
+      $totals['contribution'] += $row['civicrm_contribution_contribution_amount'];
+      $totals['eligibleAmount'] += $row[$giftAidEligibleAmountField];
+      $totals['giftAidAmount'] += $row[$giftAidAmountField];
     }
 
-    $totalAmount = round($totalAmount, 2);
-    $totalGiftAidAmount = round($totalGiftAidAmount, 2);
+    foreach ($totals as $key => $value) {
+      $totals[$key] = number_format($value, 2);
+    }
 
     $statistics['counts']['amount'] = [
-      'value' => $totalAmount,
-      'title' => 'Total Amount',
+      'value' => $totals['contribution'],
+      'title' => 'Total Donation Amount',
       'type'  => CRM_Utils_Type::T_MONEY
     ];
-    $statistics['counts']['giftaid'] = [
-      'value' => $totalGiftAidAmount,
+    $statistics['counts']['eligibleamount'] = [
+      'value' => $totals['eligibleAmount'],
+      'title' => 'Total Eligible Amount',
+      'type'  => CRM_Utils_Type::T_MONEY
+    ];
+    $statistics['counts']['giftaidamount'] = [
+      'value' => $totals['giftAidAmount'],
       'title' => 'Total Gift Aid Amount',
       'type'  => CRM_Utils_Type::T_MONEY
     ];
@@ -333,13 +273,11 @@ class CRM_Civigiftaid_Report_Form_Contribute_GiftAid extends CRM_Report_Form {
   public function alterDisplay(&$rows) {
     $entryFound = FALSE;
     foreach ($rows as $rowNum => $row) {
-      // i.e. remove row from report if it has financial type ineligible for Gift Aid
-      if (FALSE === $this->hasEligibleFinancialType($row)) {
-        unset($rows[$rowNum]);
-        continue;
+      if (array_key_exists('civicrm_contact_first_name', $row)) {
+        list($contactName, $errors) = CRM_Civigiftaid_Declaration::getFilteredDonorName($row['civicrm_contact_first_name'], $row['civicrm_contact_last_name']);
+        $rows[$rowNum]['civicrm_contact_first_name'] = $contactName[0];
+        $rows[$rowNum]['civicrm_contact_last_name'] = $contactName[1];
       }
-
-      // handle contribution status id
       if (array_key_exists('civicrm_contribution_contact_id', $row)) {
         if ($value = $row['civicrm_contribution_contact_id']) {
           $contact = new CRM_Contact_DAO_Contact();
@@ -354,41 +292,24 @@ class CRM_Civigiftaid_Report_Form_Contribute_GiftAid extends CRM_Report_Form {
           $rows[$rowNum]['civicrm_contribution_contact_id_hover'] =
             ts("View Contact Summary for this Contact.");
         }
-        if (isset($row['civicrm_line_item_amount'])) {
-          $batch = $this->getBatchById($row['civicrm_entity_batch_batch_id']);
-          $giftaidAmount = CRM_Civigiftaid_Utils_Contribution::calculateGiftAidAmt(
-            $row['civicrm_line_item_amount'],
-            $batch['basic_rate_tax']
-          );
-          $rows[$rowNum]['civicrm_line_item_gift_aid_amount'] = number_format((float)$giftaidAmount, 2, '.', '');
-        }
-        if (!empty($row['civicrm_line_item_entity_table'])) {
-          $rows[$rowNum]['civicrm_line_item_entity_table'] =
-            CRM_Civigiftaid_Utils_Contribution::getLineItemName(
-              $row['civicrm_line_item_entity_table']
-            );
-        }
-        if (isset($row['civicrm_line_item_quantity'])) {
-          $rows[$rowNum]['civicrm_line_item_quantity'] = (int) $row['civicrm_line_item_quantity'];
-        }
-
         $entryFound = TRUE;
       }
-
-      // handle State/Province Codes
-      if (array_key_exists('civicrm_address_state_province_id', $row)) {
-        if ($value = $row['civicrm_address_state_province_id']) {
-          $rows[$rowNum]['civicrm_address_state_province_id'] = CRM_Core_PseudoConstant::stateProvince($value, FALSE);
-        }
-        $entryFound = TRUE;
+      if (array_key_exists('civicrm_contribution_contribution_id', $row)) {
+        $url = CRM_Utils_System::url("civicrm/contact/view/contribution",
+          "reset=1&cid={$row['civicrm_contribution_contact_id']}&id={$row['civicrm_contribution_contribution_id']}&action=view&context=contribution",
+          $this->_absoluteUrl
+        );
+        $rows[$rowNum]['civicrm_contribution_contribution_id_link'] = $url;
+        $rows[$rowNum]['civicrm_contribution_contribution_id_hover'] = ts('View contribution');
       }
 
-      // handle Country Codes
-      if (array_key_exists('civicrm_address_country_id', $row)) {
-        if ($value = $row['civicrm_address_country_id']) {
-          $rows[$rowNum]['civicrm_address_country_id'] = CRM_Core_PseudoConstant::country($value, FALSE);
-        }
-        $entryFound = TRUE;
+
+      if (array_key_exists('civicrm_address_street_address', $row)) {
+        $address = CRM_Civigiftaid_Declaration::getDonorAddress($row['civicrm_contribution_contact_id'], $row['civicrm_contribution_contribution_id'], CRM_Utils_Date::isoToMysql($row['civicrm_contribution_receive_date']));
+        $rows[$rowNum]['civicrm_address_house_number'] = $address['house_number'];
+        $rows[$rowNum]['civicrm_address_street_address']
+          = $address['address'];
+        $rows[$rowNum]['civicrm_address_postal_code'] = $address['postcode'];
       }
 
       // handle Contact Title
@@ -415,53 +336,12 @@ class CRM_Civigiftaid_Report_Form_Contribute_GiftAid extends CRM_Report_Form {
     }
   }
 
-  /**
-   * Return whether a row has financial type eligible for Gift Aid (i.e. has financial type which was enabled as
-   * eligible for Gift Aid, at the time the contribution was added to the batch).
-   *
-   * @param $row
-   *
-   * @return bool
-   */
-  private function hasEligibleFinancialType($row) {
-    if ((!$batch = $this->getBatchById($row['civicrm_entity_batch_batch_id']))
-      || (!$batch['globally_enabled']
-        && !in_array($row['civicrm_financial_type_financial_type_id'], $batch['financial_types_enabled']))
-    ) {
-      return FALSE;
-    }
-
-    return TRUE;
-  }
-
-  /**
-   * Get a batch by ID.
-   *
-   * @param $id
-   *
-   * @return mixed
-   */
-  private function getBatchById($id) {
-    if (!isset(self::$batches[$id])) {
-      if (($batch = CRM_Civigiftaid_BAO_BatchSettings::findByBatchId($id)) instanceof CRM_Core_DAO) {
-        $batchArr = $batch->toArray();
-        $batchArr['financial_types_enabled'] = unserialize($batchArr['financial_types_enabled']);
-
-        self::$batches[$id] = $batchArr;
-      }
-      else {
-        self::$batches[$id] = NULL;
-      }
-    }
-
-    return self::$batches[$id];
-  }
-
   private function reorderColumns() {
     $columnTitleOrder = [
       'title',
       'first name',
       'last name',
+      'house name or number',
       'street address',
       'city',
       'county',
@@ -474,10 +354,12 @@ class CRM_Civigiftaid_Report_Form_Contribute_GiftAid extends CRM_Report_Form {
       'description',
       'quantity',
       'eligible for gift aid?',
+      'donation amount',
+      'eligible amount',
+      'gift aid amount',
       'batch name',
-      'payment no',
-      'line item no',
-      'gift aid amount'
+      'contribution id',
+      'line item id',
     ];
 
     $compare = function ($a, $b) use (&$columnTitleOrder) {
@@ -511,3 +393,4 @@ class CRM_Civigiftaid_Report_Form_Contribute_GiftAid extends CRM_Report_Form {
   }
 
 }
+

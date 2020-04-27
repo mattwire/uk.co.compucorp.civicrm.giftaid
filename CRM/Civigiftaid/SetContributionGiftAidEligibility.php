@@ -29,7 +29,24 @@ class CRM_Civigiftaid_SetContributionGiftAidEligibility {
     if (($event->entity !== 'Contribution') || !in_array($event->action, ['create', 'edit'])) {
       return;
     }
+
+    if (CRM_Core_Transaction::isActive()) {
+      CRM_Core_Transaction::addCallback(CRM_Core_Transaction::PHASE_POST_COMMIT,
+        'CRM_Civigiftaid_SetContributionGiftAidEligibility::runCallback',
+        [$event]);
+    }
+    else {
+      CRM_Civigiftaid_SetContributionGiftAidEligibility::runCallback($event);
+    }
+  }
+
+  public static function runCallback($event) {
+    if (isset(\Civi::$statics[__CLASS__]['runCallback'])) {
+      return;
+    }
+    \Civi::$statics[__CLASS__]['runCallback'] = TRUE;
     if (self::setGiftAidEligibilityStatus($event->id, $event->action)) {
+      $event->object->find();
       if (!CRM_Civigiftaid_Declaration::getDeclaration($event->object->contact_id)) {
         CRM_Core_Session::setStatus(self::getMissingGiftAidDeclarationMessage($event->object->contact_id), E::ts('Gift Aid Declaration'), 'success');
       }

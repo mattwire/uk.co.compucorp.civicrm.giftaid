@@ -492,6 +492,10 @@ class CRM_Civigiftaid_Declaration {
    * @return array            - declaration record as associative array, else empty array.
    */
   public static function getDeclaration($contactID, $date = NULL, $charity = NULL) {
+    if (empty($contactID)) {
+      \Civi::log()->debug('CRM_Civigiftaid_Declaration::getDeclaration called with empty contact ID!');
+      return [];
+    }
     if (is_null($date)) {
       $date = date('YmdHis');
     }

@@ -1,3 +1,7 @@
+## Release 3.3.9
+
+* Fix crash on contribution thankyou page when a new contact is created.
+
 ## Release 3.3.8
 
 * Refactor GiftAid report to fix multiple issues and show batches with multiple financial types.

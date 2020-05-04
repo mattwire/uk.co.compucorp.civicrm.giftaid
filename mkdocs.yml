@@ -16,7 +16,7 @@ markdown_extensions:
   - pymdownx.mark
 
 nav:
-- Release Notes: release/release_notes.md
+- Release Notes: releasenotes.md
 - Introduction: index.md
 - Setup and Configuration: setup.md
 - The Gift Aid Declaration: declaration.md

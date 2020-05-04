@@ -1,3 +1,8 @@
+## Release 3.3.10
+
+* Only display eligible but no declaration message if logged in and has access to civicontribute.
+* Use session to track giftaid selections on form so it works with confirmation page.
+
 ## Release 3.3.9
 
 * Fix crash on contribution thankyou page when a new contact is created.

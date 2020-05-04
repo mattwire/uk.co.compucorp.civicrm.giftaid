@@ -186,16 +186,17 @@ function civigiftaid_civicrm_buildForm($formName, &$form) {
  */
 function civigiftaid_civicrm_postProcess($formName, &$form) {
   // Get and store the gift aid declaration value if set for use in civigiftaid_update_declaration_amount
-  if (!isset(Civi::$statics[E::LONG_NAME]['uktaxpayer'])) {
+  $session = CRM_Core_Session::singleton();
+  if (!$session->get('uktaxpayer', E::LONG_NAME)) {
     $ukTaxPayerField = CRM_Civigiftaid_Utils::getCustomByName('eligible_for_gift_aid', 'Gift_Aid_Declaration');
     if (isset($form->_submitValues[$ukTaxPayerField])) {
-      Civi::$statics[E::LONG_NAME]['uktaxpayer'] = $form->_submitValues[$ukTaxPayerField];
+      $session->set('uktaxpayer', $form->_submitValues[$ukTaxPayerField], E::LONG_NAME);
     }
   }
   // Get the title of the submitted form
-  if (!isset(Civi::$statics[E::LONG_NAME]['postProcessTitle'])) {
+  if (!$session->get('postProcessTitle', E::LONG_NAME)) {
     if ($form->getTitle()) {
-      Civi::$statics[E::LONG_NAME]['postProcessTitle'] = $form->getTitle();
+      $session->set('postProcessTitle', $form->getTitle(), E::LONG_NAME);
     }
   }
 

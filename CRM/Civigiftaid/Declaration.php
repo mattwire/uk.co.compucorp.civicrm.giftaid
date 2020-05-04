@@ -52,8 +52,9 @@ class CRM_Civigiftaid_Declaration {
     ]);
 
     // If declaration updated via contribution page etc. it will have been set in postProcess
-    if (isset(Civi::$statics[E::LONG_NAME]['uktaxpayer'])) {
-      $contactGiftAidEligibleStatus = Civi::$statics[E::LONG_NAME]['uktaxpayer'];
+    $session = CRM_Core_Session::singleton();
+    if ($session->get('uktaxpayer', E::LONG_NAME)) {
+      $contactGiftAidEligibleStatus = $session->get('uktaxpayer', E::LONG_NAME);
     }
 
     // Get the gift aid eligible status
@@ -366,7 +367,7 @@ class CRM_Civigiftaid_Declaration {
         // There is no current declaration so create new.
         if (empty($currentDeclaration)) {
           if (empty($newParams['source'])) {
-            $newParams['source'] = Civi::$statics[E::LONG_NAME]['postProcessTitle'] ?? NULL;
+            $newParams['source'] = CRM_Core_Session::singleton()->get('postProcessTitle', E::LONG_NAME);
           }
           CRM_Civigiftaid_Declaration::insertDeclaration($newParams);
         }
@@ -382,7 +383,7 @@ class CRM_Civigiftaid_Declaration {
           CRM_Civigiftaid_Declaration::updateDeclaration($updateParams);
           unset($newParams['id'], $newParams['end_date']);
           if (empty($newParams['source'])) {
-            $newParams['source'] = Civi::$statics[E::LONG_NAME]['postProcessTitle'] ?? NULL;
+            $newParams['source'] = CRM_Core_Session::singleton()->get('postProcessTitle', E::LONG_NAME);
           }
           CRM_Civigiftaid_Declaration::insertDeclaration($newParams);
         }
@@ -418,7 +419,7 @@ class CRM_Civigiftaid_Declaration {
         if (empty($currentDeclaration)) {
           // There is no current declaration so create new.
           if (empty($newParams['source'])) {
-            $newParams['source'] = Civi::$statics[E::LONG_NAME]['postProcessTitle'] ?? NULL;
+            $newParams['source'] = CRM_Core_Session::singleton()->get('postProcessTitle', E::LONG_NAME);
           }
           CRM_Civigiftaid_Declaration::insertDeclaration($newParams);
         }
@@ -436,7 +437,7 @@ class CRM_Civigiftaid_Declaration {
           CRM_Civigiftaid_Declaration::updateDeclaration($updateParams);
           unset($newParams['id'], $newParams['end_date']);
           if (empty($newParams['source'])) {
-            $newParams['source'] = Civi::$statics[E::LONG_NAME]['postProcessTitle'] ?? NULL;
+            $newParams['source'] = CRM_Core_Session::singleton()->get('postProcessTitle', E::LONG_NAME);
           }
           CRM_Civigiftaid_Declaration::insertDeclaration($newParams);
         }

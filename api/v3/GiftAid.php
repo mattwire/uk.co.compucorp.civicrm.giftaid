@@ -65,6 +65,7 @@ function civicrm_api3_gift_aid_updateeligiblecontributions($params) {
   foreach ($contributions as $contributionID => $contributionDetail) {
     // Check batch name here because it may be NULL or empty string and we can't check that using API3.
     if (!empty($contributionDetail[CRM_Civigiftaid_Utils::getCustomByName('batch_name', 'Gift_Aid')])) {
+      // Contribution is part of a batch so we must not change/process it.
       continue;
     }
     CRM_Civigiftaid_SetContributionGiftAidEligibility::setGiftAidEligibilityStatus($contributionID);

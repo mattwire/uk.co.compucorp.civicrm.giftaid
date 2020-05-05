@@ -1,11 +1,11 @@
 # The Gift Aid Declaration
 
-On install, a "Gift Aid" profile was created for you.
-If you add this to a contribution page the user can make the gift aid declaration:
+On install, a "Gift Aid" profile is created for you.
+If you add this to a contribution page the user can make a gift aid declaration:
 ![Gift Aid Declaration via profile](images/profilegiftaid.png)
 
 It will then appear on the contact record:
-![Gift Aid Declarations on Contact Record](images/profilegiftaid.png)
+![Gift Aid Declarations on Contact Record](images/contactsummarygiftaid.png)
 
 ## Declaration Fields
 
@@ -24,8 +24,9 @@ The donor has declared that gift aid can be claimed on all eligible contribution
 The donor has declared that gift aid can NOT be claimed on eligible contributions today and in the future.
 
 ### End Date
+
 The *current* declaration represents the current status and will not have an end date set. This applies even if the
-declaration is "No" - because it will represent a time period between start_date/end_date where the contact was not eligible.
+declaration is "No" - because it will represent a time period between `start_date`/`end_date` where the contact was not eligible.
 
 ### Source
 
@@ -55,9 +56,8 @@ If the new declaration is "No" then no changes are made.
 #### Existing "Yes and past 4 years"/"Yes" declaration
 
 If the new declaration is "No":
-1. The existing declaration end date is set to today.
+1. The existing declaration end date is set to today and its "Reason Ended" field is set to "Contact declined".
 1. A new declaration is created with start date set to today and eligible = "No".
-1. "Reason Ended" is set to "Contact declined".
 
 If the new declaration is "Yes and past 4 years" and the existing declaration is "Yes":
 1. If the start date of the existing declaration is greater than 4 years ago no changes are made.

@@ -61,7 +61,7 @@ class CRM_Civigiftaid_SetContributionGiftAidEligibility {
    *
    * We are mainly concerned about contribution added from Events
    * or the membership pages by the admin and not the Add new contribution screen as
-   * this screen already has a form widget to set gift aid eleigibility status.
+   * this screen already has a form widget to set gift aid eligibility status.
    *
    * This function checks if the contribution is eligible and automatically sets
    * the status to yes, else, it sets it to No.
@@ -72,6 +72,8 @@ class CRM_Civigiftaid_SetContributionGiftAidEligibility {
    *   The action - eg. create/edit (If action=create then batch_name is cleared)
    *
    * @return bool
+   *   Whether the contribution was eligible
+   *
    * @throws \CRM_Extension_Exception
    * @throws \CiviCRM_API3_Exception
    */

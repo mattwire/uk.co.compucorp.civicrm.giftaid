@@ -169,13 +169,14 @@ class CRM_Civigiftaid_Declaration {
   }
 
   /**
-   * Get the (table) ID of the latest gift aid declaration for a contact
+   * Get the (table) ID and the eligibility of the last added (may not be most recent) gift aid declaration for a contact
+   *
    * When submitting a profile with a (Individual) eligible_for_gift_aid field we get a partial declaration created
    * but we want to create a full declaration
    *
    * @param int $contactID
    *
-    * @return array
+   * @return array
    */
   private static function getPartialDeclaration($contactID): array {
     $sql = "SELECT id as id, start_date, eligible_for_gift_aid
@@ -219,6 +220,7 @@ class CRM_Civigiftaid_Declaration {
     }
 
     if (CRM_Utils_Array::value('id', $params)) {
+      // We will update an existing record.
       $keyVals = [];
       $queryParams[1] = [$params['id'], 'Integer'];
       $count = 2;
@@ -236,6 +238,7 @@ class CRM_Civigiftaid_Declaration {
       $query = "UPDATE civicrm_value_gift_aid_declaration SET {$keyValsString} WHERE id=%1";
     }
     else {
+      // We will create a new record.
       $count = 1;
       foreach ($cols as $colName => $colType) {
         $insertVals[$colName] = CRM_Utils_Array::value($colName, $params, '');
@@ -250,10 +253,16 @@ class CRM_Civigiftaid_Declaration {
       $query = "INSERT INTO civicrm_value_gift_aid_declaration (" . implode(',', array_keys($insertVals)) . ") VALUES (" . implode(',', $values) . ")";
     }
 
-    // Insert
+    // Insert or update.
     CRM_Core_DAO::executeQuery($query, $queryParams);
   }
 
+  /**
+   * Delete all declarations that are missing a postcode and a start_date for
+   * the given contact.
+   *
+   * @param int $contactID
+   */
   public static function deletePartialDeclaration($contactID) {
     $sql = "DELETE FROM civicrm_value_gift_aid_declaration
               WHERE entity_id = %1 AND post_code IS NULL AND start_date IS NULL";
@@ -364,7 +373,7 @@ class CRM_Civigiftaid_Declaration {
     switch ($newParams['eligible_for_gift_aid']) {
       case self::DECLARATION_IS_YES:
       case self::DECLARATION_IS_PAST_4_YEARS:
-        // There is no current declaration so create new.
+        // If there is no current declaration, create new.
         if (empty($currentDeclaration)) {
           if (empty($newParams['source'])) {
             $newParams['source'] = CRM_Core_Session::singleton()->get('postProcessTitle', E::LONG_NAME);
@@ -507,7 +516,9 @@ class CRM_Civigiftaid_Declaration {
     }
 
     // Get current declaration: start_date in past, end_date in future or NULL
-    // - if > 1, pick latest end_date
+    // If > 1, pick latest end_date
+    // Note that a record with an end_date will be chosen over one with a NULL
+    // end_date, since ORDER BY end_date DESC will put NULL values last.
     $currentDeclaration = [];
     $sql = "
         SELECT id, entity_id, eligible_for_gift_aid, start_date, end_date, reason_ended, source, notes

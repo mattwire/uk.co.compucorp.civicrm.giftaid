@@ -267,14 +267,12 @@ class CRM_Civigiftaid_Declaration {
   public static function getContactsWithDeclarations() {
     $contactsWithDeclarations = [];
     $sql = "
-        SELECT id, eligible_for_gift_aid, entity_id
-        FROM   civicrm_value_gift_aid_declaration
+        SELECT   entity_id
+        FROM     civicrm_value_gift_aid_declaration
         GROUP BY entity_id";
 
-    $dao = CRM_Core_DAO::executeQuery($sql);
-    foreach ($dao->fetchAll() as $row) {
-      $contactsWithDeclarations[] = $row['entity_id'];
-    }
+    $contactsWithDeclarations = CRM_Core_DAO::executeQuery($sql)
+      ->fetchMap('entity_id', 'entity_id');
 
     return $contactsWithDeclarations;
   }

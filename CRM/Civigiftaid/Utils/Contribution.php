@@ -115,6 +115,7 @@ class CRM_Civigiftaid_Utils_Contribution {
   public static function updateGiftAidFields($contributionID, $eligibleForGiftAid = NULL, $batchName = '', $addToBatch = FALSE) {
     if (!empty($batchName) && !$addToBatch) {
       // Don't touch this contribution - it's already part of a batch
+      // and we're not being called to clear the batch (e.g. new contribution in a recurring contribution).
       return;
     }
 
@@ -123,7 +124,7 @@ class CRM_Civigiftaid_Utils_Contribution {
     }
     if (isset($eligibleForGiftAid)) {
       $eligibleForGiftAid = (int) $eligibleForGiftAid;
-      $contributionParams[CRM_Civigiftaid_Utils::getCustomByName('Eligible_for_Gift_Aid', 'Gift_Aid')] = (int) $eligibleForGiftAid;
+      $contributionParams[CRM_Civigiftaid_Utils::getCustomByName('Eligible_for_Gift_Aid', 'Gift_Aid')] = $eligibleForGiftAid;
       if ($eligibleForGiftAid === 0) {
         $contributionParams[CRM_Civigiftaid_Utils::getCustomByName('gift_aid_amount', 'Gift_Aid')] = NULL;
         $contributionParams[CRM_Civigiftaid_Utils::getCustomByName('amount', 'Gift_Aid')] = NULL;
@@ -685,6 +686,7 @@ class CRM_Civigiftaid_Utils_Contribution {
       return FALSE;
     };
     // If it is not set ('') it's not the same as DECLARATION_IS_NO
+    // This does nothing; $contributionEligible is not defined anywhere. @todo
     if (!empty($contributionEligible) && ($contributionEligible == CRM_Civigiftaid_Declaration::DECLARATION_IS_NO)) {
       return FALSE;
     }

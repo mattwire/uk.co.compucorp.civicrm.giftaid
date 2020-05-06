@@ -378,7 +378,7 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
       $optionGroups[$groupName] = civicrm_api3('OptionGroup', 'get', [
         'name' => $groupName,
       ]);
-      if ($optionGroups[$groupName]['id']) {
+      if ($optionGroups[$groupName]['id'] ?? NULL) {
         $groupParams['id'] = $optionGroups[$groupName]['id'];
       }
       // Add new option groups and options

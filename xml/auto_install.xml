@@ -48,6 +48,7 @@
       <note_rows>4</note_rows>
       <column_name>eligible_for_gift_aid</column_name>
       <option_group_id>1</option_group_id>
+      <option_type>0</option_type>
       <custom_group_name>Gift_Aid_Declaration</custom_group_name>
     </CustomField>
     <CustomField>
@@ -137,6 +138,7 @@
       <note_rows>4</note_rows>
       <column_name>reason_ended</column_name>
       <option_group_id>1</option_group_id>
+      <option_type>0</option_type>
       <custom_group_name>Gift_Aid_Declaration</custom_group_name>
     </CustomField>
     <CustomField>
@@ -207,6 +209,7 @@
       <note_columns>60</note_columns>
       <note_rows>4</note_rows>
       <option_group_id>1</option_group_id>
+      <option_type>0</option_type>
       <column_name>eligible_for_gift_aid</column_name>
       <custom_group_name>Gift_Aid</custom_group_name>
     </CustomField>
@@ -259,6 +262,7 @@
       <note_columns>60</note_columns>
       <note_rows>4</note_rows>
       <option_group_id>1</option_group_id>
+      <option_type>0</option_type>
       <column_name>batch_name</column_name>
       <custom_group_name>Gift_Aid</custom_group_name>
     </CustomField>

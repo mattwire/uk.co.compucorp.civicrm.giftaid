@@ -1,3 +1,8 @@
+## Release 3.3.11
+
+* Use "Primary" address instead of "Home" address for declarations.
+* Remove code to handle multiple charities - it is untested and probably doesn't work anymore and adds complexity to the code.
+
 ## Release 3.3.10
 
 * Only display eligible but no declaration message if logged in and has access to civicontribute.

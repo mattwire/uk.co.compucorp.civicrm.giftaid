@@ -345,17 +345,8 @@ function civigiftaid_civicrm_validateForm($formName, &$fields, &$files, &$form, 
           continue;
         }
 
-        $charity1 = NULL;
-        if (array_key_exists('charity', $values1)) {
-          $charity1 = CRM_Utils_Array::value('value', $values1['charity']);
-        }
-
         foreach ($declarations as $id2 => $values2) {
-          $charity2 = NULL;
-          if (array_key_exists('charity', $values2)) {
-            $charity2 = CRM_Utils_Array::value('value', $values2['charity']);
-          }
-          if (($id2 <= $id1) || ($charity1 != $charity2)) {
+          if ($id2 <= $id1) {
             continue;
           }
 
@@ -393,15 +384,10 @@ function civigiftaid_civicrm_validateForm($formName, &$fields, &$files, &$form, 
 
       // Check if the contact has a home address
       foreach ($declarations as $values3) {
-        $address = civicrm_api3("Address", "get",
-          [
-            'contact_id' => $contactID,
-            'location_type_id' => CRM_Civigiftaid_Declaration::getAddressLocationID(),
-          ]
-        );
-        if ($address['count'] == 0) {
+        list($fullFormattedAddress, $postcode) = CRM_Civigiftaid_Declaration::getAddressAndPostalCode($contactID);
+        if (empty($fullFormattedAddress)) {
           $errors[$values3['eligible_for_gift_aid']['name']] =
-            E::ts('You will not be able to create giftaid declaration because there is no home address recorded for this contact. If you want to create a declaration, please add home address for this contact.');
+            E::ts('You will not be able to create a giftaid declaration because there is no primary address recorded for this contact. If you want to create a declaration, please add a primary address for this contact.');
         }
       }
     }

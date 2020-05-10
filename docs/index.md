@@ -12,3 +12,9 @@ The extension is licensed under [AGPL-3.0](LICENSE.txt).
 ## Installation
 
 See: https://docs.civicrm.org/sysadmin/en/latest/customize/extensions/#installing-a-new-extension
+
+## Future development
+
+#### Addresses
+
+Think about improvements to handling address updates. Maybe this could be useful? https://lab.civicrm.org/extensions/formercommunicationdata

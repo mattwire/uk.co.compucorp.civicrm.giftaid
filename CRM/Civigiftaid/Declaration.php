@@ -17,19 +17,8 @@ use CRM_Civigiftaid_ExtensionUtil as E;
 class CRM_Civigiftaid_Declaration {
 
   public const DECLARATION_IS_YES = 1;
-
   public const DECLARATION_IS_PAST_4_YEARS = 3;
-
   public const DECLARATION_IS_NO = 0;
-
-  /**
-   * Get the Address location to use for GiftAid (currently hardcoded to "Home")
-   *
-   * @return int
-   */
-  public static function getAddressLocationID() {
-    return (int) CRM_Core_PseudoConstant::getKey('CRM_Core_BAO_Address', 'location_type_id', 'Home');
-  }
 
   /**
    * @param int $contributionID
@@ -93,7 +82,7 @@ class CRM_Civigiftaid_Declaration {
     // get Address & Postal Code of the contact
     $address = civicrm_api3('Address', 'get', [
       'contact_id' => $contactID,
-      'location_type_id' => self::getAddressLocationID(),
+      'is_primary' => 1,
     ])['values'];
     if (!empty($address)) {
       $address = reset($address);
@@ -215,9 +204,6 @@ class CRM_Civigiftaid_Declaration {
       'source' => 'String',
       'notes' => 'String',
     ];
-    if (self::isCharityColumnExists($params)) {
-      $cols['charity'] = 'String';
-    }
 
     if (CRM_Utils_Array::value('id', $params)) {
       // We will update an existing record.
@@ -311,10 +297,8 @@ class CRM_Civigiftaid_Declaration {
       throw new CRM_Core_Exception('GiftAid setDeclaration: entity_id is required');
     }
 
-    $charity = $newParams['charity'] ?? NULL;
-
     // Retrieve existing declarations for this user.
-    $currentDeclaration = CRM_Civigiftaid_Declaration::getDeclaration($newParams['entity_id'], $newParams['start_date'], $charity);
+    $currentDeclaration = CRM_Civigiftaid_Declaration::getDeclaration($newParams['entity_id'], $newParams['start_date']);
     $partialDeclaration = CRM_Civigiftaid_Declaration::getPartialDeclaration($newParams['entity_id']);
     if (!empty($partialDeclaration)) {
       // Merge the "new" params in (eg. new selection for eligible_for_gift_aid)
@@ -331,18 +315,13 @@ class CRM_Civigiftaid_Declaration {
       $newParams = array_merge($currentDeclaration, $newParams);
     }
 
-    $charityClause = '';
-    if (self::isCharityColumnExists($newParams)) {
-      $charityClause = $charity ? " AND charity='{$charity}'" : " AND (charity IS NULL OR charity = '')";
-    }
-
     // Get future declarations: start_date in future, end_date in future or NULL
     // - if > 1, pick earliest start_date
     $futureDeclaration = [];
     $sql = "
         SELECT id, eligible_for_gift_aid, start_date, end_date
         FROM   civicrm_value_gift_aid_declaration
-        WHERE  entity_id = %1 AND start_date > %2 AND (end_date > %2 OR end_date IS NULL) {$charityClause}
+        WHERE  entity_id = %1 AND start_date > %2 AND (end_date > %2 OR end_date IS NULL)
         ORDER BY start_date";
     $dao = CRM_Core_DAO::executeQuery($sql, [
       1 => [$newParams['entity_id'], 'Integer'],
@@ -470,29 +449,6 @@ class CRM_Civigiftaid_Declaration {
   }
 
   /**
-   * Does the charity column exist
-   *
-   * @param array $params
-   *
-   * @return bool
-   */
-  public static function isCharityColumnExists($params): bool {
-    if (isset(\Civi::$statics[__CLASS__]['charityColumnExists'])) {
-      return \Civi::$statics[__CLASS__]['charityColumnExists'];
-    }
-
-    $charityColumnExists = FALSE;
-    if ($charityColumnExists === NULL) {
-      $charityColumnExists = CRM_Core_BAO_SchemaHandler::checkIfFieldExists('civicrm_value_gift_aid_declaration', 'charity');
-    }
-    if (!CRM_Utils_Array::value('charity', $params)) {
-      $charityColumnExists = FALSE;
-    }
-    \Civi::$statics[__CLASS__]['charityColumnExists'] = $charityColumnExists;
-    return \Civi::$statics[__CLASS__]['charityColumnExists'];
-  }
-
-  /**
    * Get Gift Aid declaration record for Individual.
    *
    * @param int    $contactID - the Individual for whom we retrieve declaration
@@ -501,18 +457,13 @@ class CRM_Civigiftaid_Declaration {
    *
    * @return array            - declaration record as associative array, else empty array.
    */
-  public static function getDeclaration($contactID, $date = NULL, $charity = NULL) {
+  public static function getDeclaration($contactID, $date = NULL) {
     if (empty($contactID)) {
       \Civi::log()->debug('CRM_Civigiftaid_Declaration::getDeclaration called with empty contact ID!');
       return [];
     }
     if (is_null($date)) {
       $date = date('YmdHis');
-    }
-
-    $charityClause = '';
-    if (self::isCharityColumnExists([])) {
-      $charityClause = $charity ? " AND charity='{$charity}'" : " AND (charity IS NULL OR charity = '')";
     }
 
     // Get current declaration: start_date in past, end_date in future or NULL
@@ -523,7 +474,7 @@ class CRM_Civigiftaid_Declaration {
     $sql = "
         SELECT id, entity_id, eligible_for_gift_aid, start_date, end_date, reason_ended, source, notes
         FROM   civicrm_value_gift_aid_declaration
-        WHERE  entity_id = %1 AND start_date <= %2 AND (end_date > %2 OR end_date IS NULL) {$charityClause}
+        WHERE  entity_id = %1 AND start_date <= %2 AND (end_date > %2 OR end_date IS NULL)
         ORDER BY end_date DESC";
     $sqlParams = [
       1 => [$contactID, 'Integer'],
@@ -620,21 +571,17 @@ class CRM_Civigiftaid_Declaration {
     return $postcode;
   }
 
-  public static function getDonorAddress($p_contact_id, $p_contribution_id, $p_contribution_receive_date) {
-    $oSetting             = new CRM_Giftaidonline_Page_giftAidSubmissionSettings();
-    $sSource              = $oSetting->get_contribution_details_source();
+  public static function getDonorAddress($p_contact_id, $p_contribution_receive_date) {
     $aAddress['id']       = NULL;
     $aAddress['address']  = NULL;
     $aAddress['postcode'] = NULL;
     $aAddress['house_number'] = NULL;
 
-    $bGetAddressFromDeclaration = stristr($sSource, 'CONTRIBUTION') ? FALSE : TRUE;
-    if ($bGetAddressFromDeclaration) {
-      // We need to get the declaration that was current at the time that the contribution was made.
-      // Look for a declaration that:
-      //   - was eligible (ie. eligible_for_gift_aid is 1 or 3 and not 0).
-      //   - contribution receive date was between start and end date for declaration.
-      $sSql =<<<SQL
+    // We need to get the declaration that was current at the time that the contribution was made.
+    // Look for a declaration that:
+    //   - was eligible (ie. eligible_for_gift_aid is 1 or 3 and not 0).
+    //   - contribution receive date was between start and end date for declaration.
+    $sSql =<<<SQL
               SELECT   id         AS id
               ,        address    AS address
               ,        post_code  AS postcode
@@ -646,21 +593,11 @@ class CRM_Civigiftaid_Declaration {
               ORDER BY start_date ASC
               LIMIT  1
 SQL;
-      $aParams = [
-        1 => [$p_contact_id, 'Integer'],
-        2 => [$p_contribution_receive_date, 'Timestamp']
-      ];
-    } else {
-      $sSql =<<<SQL
-              SELECT   id        AS id
-              ,        address   AS address
-              ,        post_code AS postcode
-              FROM     civicrm_value_gift_aid_submission
-              WHERE    entity_id = %1
-              LIMIT  1
-SQL;
-      $aParams = [1 => [$p_contribution_id, 'Integer']];
-    }
+    $aParams = [
+      1 => [$p_contact_id, 'Integer'],
+      2 => [$p_contribution_receive_date, 'Timestamp']
+    ];
+
     $oDao = CRM_Core_DAO::executeQuery( $sSql
       , $aParams
       , $abort         = TRUE

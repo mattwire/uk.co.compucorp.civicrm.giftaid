@@ -212,7 +212,7 @@ class CRM_Civigiftaid_Report_Form_Contribute_GiftAid extends CRM_Report_Form {
       ON {$this->_aliases['civicrm_contribution']}.contact_id = {$this->_aliases['civicrm_contact']}.id
       LEFT JOIN civicrm_address {$this->_aliases['civicrm_address']}
       ON ({$this->_aliases['civicrm_contribution']}.contact_id = {$this->_aliases['civicrm_address']}.contact_id
-        AND {$this->_aliases['civicrm_address']}.location_type_id = " . CRM_Civigiftaid_Declaration::getAddressLocationID() . ")";
+        AND {$this->_aliases['civicrm_address']}.is_primary = 1)";
   }
 
   public function where() {
@@ -305,7 +305,7 @@ class CRM_Civigiftaid_Report_Form_Contribute_GiftAid extends CRM_Report_Form {
 
 
       if (array_key_exists('civicrm_address_street_address', $row)) {
-        $address = CRM_Civigiftaid_Declaration::getDonorAddress($row['civicrm_contribution_contact_id'], $row['civicrm_contribution_contribution_id'], CRM_Utils_Date::isoToMysql($row['civicrm_contribution_receive_date']));
+        $address = CRM_Civigiftaid_Declaration::getDonorAddress($row['civicrm_contribution_contact_id'], CRM_Utils_Date::isoToMysql($row['civicrm_contribution_receive_date']));
         $rows[$rowNum]['civicrm_address_house_number'] = $address['house_number'];
         $rows[$rowNum]['civicrm_address_street_address']
           = $address['address'];

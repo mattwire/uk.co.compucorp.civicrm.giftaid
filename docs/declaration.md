@@ -23,6 +23,11 @@ The donor has declared that gift aid can be claimed on all eligible contribution
 
 The donor has declared that gift aid can NOT be claimed on eligible contributions today and in the future.
 
+### Address / Postcode
+
+- The contact "Primary" address is used.
+- It is formatted and filtered according to HMRC rules and then copied to the declaration automatically.
+
 ### End Date
 
 The *current* declaration represents the current status and will not have an end date set. This applies even if the

@@ -8,6 +8,8 @@ use Civi\Test\TransactionalInterface;
 /**
  * Tests for CRM/Civigiftaid/Utils/Contribution.php class
  *
+ * NOTE: these are NOT implementing TransactionalInterface - so we must do all our own cleanup.
+ *
  * Tips:
  *  - With HookInterface, you may implement CiviCRM hooks directly in the test class.
  *    Simply create corresponding functions (e.g. "hook_civicrm_post(...)" or similar).
@@ -19,7 +21,7 @@ use Civi\Test\TransactionalInterface;
  *
  * @group headless
  */
-class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase implements HeadlessInterface, HookInterface, TransactionalInterface {
+class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase implements HeadlessInterface, HookInterface {
 
 
   /** @var array */
@@ -42,19 +44,45 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
   }
 
   public function tearDown() {
+    if (!$this->contacts) {
+      return;
+    }
+    $contactIDs = array_keys($this->contacts);
+
+    $contributions = \Civi\Api4\Contribution::get()
+      ->addSelect('id', 'contact_id')
+      ->addWhere('contact_id', 'IN', $contactIDs)
+      ->setCheckPermissions(FALSE)
+      ->execute();
+
+    // Delete contributions
+    if ($contributions) {
+      \Civi\Api4\Contribution::delete()
+        ->addWhere('contact_id', 'IN', $contactIDs)
+        ->setCheckPermissions(FALSE)
+        ->execute();
+    }
+
+    // Delete Contacts
+    \Civi\Api4\Contact::delete()
+      ->addWhere('id', 'IN', array_keys($this->contacts))
+      ->setCheckPermissions(FALSE)
+      ->execute();
+
+    // Financial records? There's probably other stuff left here.
+
     parent::tearDown();
   }
 
   /**
    */
-  public function testValidateContribToBatch() {
+  public function testCreateContribWithApi3SetsCustomData() {
     $this->setupFixture1();
 
     $contributionGiftAidField = CRM_Civigiftaid_Utils::getCustomByName('Eligible_For_Gift_Aid', 'Gift_Aid');
     $contactGiftAidField = CRM_Civigiftaid_Utils::getCustomByName('Eligible_For_Gift_Aid', 'Gift_Aid_Declaration');
 
-    // Create contribution
-    // This doesn't work with api4 so we use api3
+    // Create contribution using API3
     $contributionID = civicrm_api3('Contribution', 'create', [
       'contact_id' => $this->contacts[0]['id'],
       'financial_type_id' => 1,
@@ -71,17 +99,10 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
       ->execute()[0];
 
     //$this->dump();
-    $this->assertEquals(1, $contributions['Gift_Aid.Eligible_for_Gift_Aid'] ?? NULL);
-    $this->assertEquals(100, $contributions['Gift_Aid.Amount'] ?? NULL);
-    $this->assertEquals(25, $contributions['Gift_Aid.Gift_Aid_Amount'] ?? NULL);
-    $this->assertEquals('', $contributions['Gift_Aid.Batch_Name'] ?? NULL);
-
-    //$this->assertNull($contributions['Gift_Aid.Amount'] ?? NULL);
-    //$this->assertEquals(NULL, $contributions['Gift_Aid.Gift_Aid_Amount'] ?? NULL);
-    //$this->assertEquals(NULL, $contributions['Gift_Aid.Gift_Batch_Name'] ?? NULL);
-
-    // CRM_Civigiftaid_Utils::getCustomByName('batch_name', 'Gift_Aid'),
-    // CRM_Civigiftaid_Utils::getCustomByName('Eligible_for_Gift_Aid', 'Gift_Aid'),
+    $this->assertEquals(1, $contributions['Gift_Aid.Eligible_for_Gift_Aid'] ?? NULL, "Expect contribution to be eligible.");
+    $this->assertEquals('', $contributions['Gift_Aid.Batch_Name'] ?? NULL, "Expected empty batch name");
+    $this->assertEquals(100, $contributions['Gift_Aid.Amount'] ?? NULL, "Expected amount eligible to be calculated");
+    $this->assertEquals(25, $contributions['Gift_Aid.Gift_Aid_Amount'] ?? NULL, "Expected amount claimable to be calculated");
   }
 
   /**

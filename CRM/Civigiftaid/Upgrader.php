@@ -26,6 +26,14 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
    * Example: Run an external SQL script when the module is installed
    */
   public function install() {
+    // For some reason, possibly to do with the way auto_install.xml is handled
+    // and the fact that it includes `<option_group_id>1</>`, we end up with
+    // the underlying table having a default batch value of '1' - it should be
+    // NULL. Note that this query (or similar) is included in an old upgrade
+    // (sql/upgrade_20.sql), so it's likely that only sites installing this new
+    // suffer.
+    $this->executeSqlFile('sql/reset_batch_name_default.sql');
+
     $this->setOptionGroups();
     $this->enableOptionGroups(1);
     $this->setCustomFields();
@@ -34,7 +42,6 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
     $this->upgrade_3103();
     $this->upgrade_3104();
   }
-
   /**
    * Example: Run an external SQL script when the module is uninstalled
    */
@@ -155,6 +162,21 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
   public function upgrade_3107() {
     $this->log('Updating custom fields');
     $this->setCustomFields();
+    return TRUE;
+  }
+
+  /**
+   * There's the chance of ambiguity on the default value of batch_name,
+   * which should be NULL. This was causing tests to fail on new installs
+   * and historically a lot has changed around this so better to make sure
+   * the default is applied here too.
+   *
+   * @see https://github.com/mattwire/uk.co.compucorp.civicrm.giftaid/pull/18
+   * @see comment in install()
+   */
+  public function upgrade_3108() {
+    $this->log('Updating default batch_name');
+    $this->executeSqlFile('sql/reset_batch_name_default.sql');
     return TRUE;
   }
 

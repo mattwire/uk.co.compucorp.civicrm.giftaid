@@ -34,9 +34,13 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
   public function setUpHeadless() {
     // Civi\Test has many helpers, like install(), uninstall(), sql(), and sqlFile().
     // See: https://docs.civicrm.org/dev/en/latest/testing/phpunit/#civitest
+
+    // Set to TRUE to force a reset - but your tests will take forever.
+    $forceResetDatabase = FALSE;
+
     return \Civi\Test::headless()
       ->installMe(__DIR__)
-      ->apply();
+      ->apply($forceResetDatabase);
   }
 
   public function setUp() {

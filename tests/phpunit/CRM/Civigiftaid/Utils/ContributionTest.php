@@ -140,6 +140,119 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
     $this->assertEquals('', $contributions['Gift_Aid.Batch_Name'] ?? NULL);
   }
 
+  /**
+   * Test contribution eligibility in various situations
+   *
+   * @dataProvider contributionEligibilityCalcsCases
+   */
+  public function testContributionEligibilityCalcs($label, $settings, $orderCreateParams, $expectations) {
+
+    $this->setupFixture1();
+
+    // Apply settings.
+    CRM_Civigiftaid_Settings::save($settings);
+
+    // Create contribution with order api
+    // Merge in common fields:
+    $orderCreateParams += [
+      'contact_id'             => $this->contacts[0]['id'],
+      'total_amount'           => 100,
+      'contribution_status_id' => 'Pending',
+    ];
+    $contributionID = civicrm_api3('Order', 'create', $orderCreateParams)['id'] ?? NULL;
+    /*
+    // Can't use API4 at the mo as Order is not implemented.
+    $contributionID = \Civi\Api4\Contribution::create()
+      ->setCheckPermissions(FALSE)
+      ->addValue('contact_id', $this->contacts[0]['id'])
+      ->addValue('financial_type_id', $params['financial_type_id'])
+      ->addValue('total_amount', 100)
+      // ->addValue('Gift_Aid.Eligible_for_Gift_Aid', 1)
+      ->execute()[0]['id'] ?? 0;
+     */
+    $this->assertGreaterThan(0, $contributionID);
+
+    // Re-fetch the contribution details.
+    $contribution = \Civi\Api4\Contribution::get()
+      ->setCheckPermissions(FALSE)
+      ->addSelect('Gift_Aid.Eligible_for_Gift_Aid', 'Gift_Aid.Amount', 'Gift_Aid.Gift_Aid_Amount', 'Gift_Aid.Batch_Name')
+      ->addWhere('id', '=', $contributionID)
+      ->execute()->first();
+
+    $this->assertEquals($expectations['eligibility'], $contribution['Gift_Aid.Eligible_for_Gift_Aid'] ?? NULL);
+    $this->assertEquals($expectations['eligible_amount'], $contribution['Gift_Aid.Amount'] ?? NULL);
+    $this->assertEquals($expectations['ga_worth'], $contribution['Gift_Aid.Gift_Aid_Amount'] ?? NULL);
+    $this->assertEquals('', $contribution['Gift_Aid.Batch_Name'] ?? NULL);
+  }
+  /**
+   * Provides datasets for testContributionEligibilityCalcs
+   *
+   * @return array
+   */
+  public function contributionEligibilityCalcsCases() {
+    return [
+      [
+        'test globally-set eligibility',
+        [ 'globally_enabled' => 1, 'financial_types_enabled'  => '' ],
+        [ 'financial_type_id' => 1 ],
+        [ 'eligibility' => 1, 'eligible_amount' => 100, 'ga_worth' => 25 ]
+      ],
+
+      [
+        'test donation (eligible)',
+        [ 'globally_enabled' => 0, 'financial_types_enabled'  => '1' ],
+        [ 'financial_type_id' => 1 ],
+        [ 'eligibility' => 1, 'eligible_amount' => 100, 'ga_worth' => 25 ]
+      ],
+
+      [
+        'test Event Fee (not eligible)',
+        [ 'globally_enabled' => 0, 'financial_types_enabled'  => '1' ],
+        [ 'financial_type_id' => 4 ],
+        [ 'eligibility' => 0, 'eligible_amount' => NULL, 'ga_worth' => NULL ]
+      ],
+
+      [
+        'test mixed Line Items Event Fee when main fin type is eligible',
+        [ 'globally_enabled' => 0, 'financial_types_enabled'  => '1' ],
+        [
+          'financial_type_id' => 1, //xxx why do we need to set this here?
+          'line_items' => [
+            [
+              'params' => [],
+              'line_item' => [
+                // The donation
+                [ 'line_total' => 20, 'financial_type_id' => 1, 'price_field_id' => 1, 'qty' =>1 ],
+                // The event fee
+                [ 'line_total' => 80, 'financial_type_id' => 4, 'price_field_id' => 1, 'qty' =>1 ],
+              ]
+            ]
+          ]
+        ],
+        [ 'eligibility' => 1, 'eligible_amount' => 20, 'ga_worth' => 5 ]
+      ],
+
+      [
+        'test mixed Line Items Event Fee when main fin type is NOT eligible',
+        [ 'globally_enabled' => 0, 'financial_types_enabled'  => '1' ],
+        [
+          'financial_type_id' => 4, //xxx why do we need to set this here?
+          'line_items' => [
+            [
+              'params' => [],
+              'line_item' => [
+                // The donation
+                [ 'line_total' => 20, 'financial_type_id' => 1, 'price_field_id' => 1, 'qty' =>1 ],
+                // The event fee
+                [ 'line_total' => 80, 'financial_type_id' => 4, 'price_field_id' => 1, 'qty' =>1 ],
+              ]
+            ]
+          ]
+        ],
+        [ 'eligibility' => 1, 'eligible_amount' => 20, 'ga_worth' => 5 ]
+      ],
+    ];
+  }
   protected function dump() {
 
     $customFieldID = CRM_Core_BAO_CustomField::getCustomFieldID('Eligible_for_Gift_Aid', 'Gift_Aid');
@@ -188,6 +301,17 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
   /**
    */
   protected function setupFixture1() {
+
+    $r = civicrm_api3('FinancialType', 'get', []);
+    $this->assertEquals('Donation', $r['values'][1]['name'], "Test assumes fin type 1 is donation but it is not.");
+    $this->assertEquals('Event Fee', $r['values'][4]['name'], "Test assumes fin type 4 is event fee but it is not.");
+
+    // Mark Donation as an eligible type, (and event fee as not), and globally eligible for now.
+    //$financialTypesAvailable = (Array) CRM_Civigiftaid_Settings::get('financial_types_enabled');
+    CRM_Civigiftaid_Settings::save([
+      'globally_enabled' => 1,
+      'financial_types_enabled' => [1], // Just donations.
+    ]);
 
     // Create a contact.
     $result = \Civi\Api4\Contact::create()

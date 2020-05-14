@@ -80,7 +80,8 @@ class CRM_Civigiftaid_SetContributionGiftAidEligibility {
   public static function setGiftAidEligibilityStatus($contributionID, $action = 'edit') {
     $contributionEligibleGiftAidFieldName = CRM_Civigiftaid_Utils::getCustomByName('Eligible_For_Gift_Aid', 'Gift_Aid');
     $contributionBatchNameFieldName = CRM_Civigiftaid_Utils::getCustomByName('batch_name', 'Gift_Aid');
-    $contribution = civicrm_api3('Contribution', 'getsingle', [
+
+    $contribution = civicrm_api3('Order', 'getsingle', [
       'id' => $contributionID,
       'return' => [
         'financial_type_id',
@@ -88,6 +89,7 @@ class CRM_Civigiftaid_SetContributionGiftAidEligibility {
         'contribution_recur_id',
         $contributionEligibleGiftAidFieldName,
         $contributionBatchNameFieldName,
+        'line_items',
       ]
     ]);
 
@@ -98,11 +100,20 @@ class CRM_Civigiftaid_SetContributionGiftAidEligibility {
     if (!isset($eligibility)) {
       // We need to set the Eligible for gift-aid field.
       $allFinancialTypesEnabled = (bool) CRM_Civigiftaid_Settings::getValue('globally_enabled');
-      if ($allFinancialTypesEnabled || self::financialTypeIsEligible($contribution['financial_type_id'])) {
+
+      if ($allFinancialTypesEnabled) {
         $eligibility = 1;
       }
       else {
+        // Assume not eligible until proven eligible.
         $eligibility = 0;
+        // We need to look through line items to determine if any of them are eligible.
+        foreach ($contribution['line_items'] as $lineItem) {
+          if (self::financialTypeIsEligible($lineItem['financial_type_id'])) {
+            $eligibility = 1;
+            break;
+          }
+        }
       }
     }
 

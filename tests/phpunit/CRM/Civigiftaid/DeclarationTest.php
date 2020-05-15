@@ -45,6 +45,8 @@ class CRM_Civigiftaid_DeclarationTest extends \PHPUnit\Framework\TestCase implem
 
   public function setUp() {
     parent::setUp();
+    // This is common to all tests.
+    $this->setupFixture1();
   }
 
   public function tearDown() {
@@ -93,45 +95,9 @@ class CRM_Civigiftaid_DeclarationTest extends \PHPUnit\Framework\TestCase implem
    * @todo this should be moved out of the form layer.
    *
    */
-  public function testDeclarationUpdateWhenNotUk() {
-
-    // First, where there is no declaration.
-    $this->setupFixture1();
-
-    $session = CRM_Core_Session::singleton();
-    // Set not uk
-    $session->set('uktaxpayer', 0, E::LONG_NAME);
-    $session->set('postProcessTitle', 'testDeclarationUpdate', E::LONG_NAME);
-    // Create the contribution which should trigger storing a declaration.
-
-    // Create (eligible) contribution
-    $contributionID = \Civi\Api4\Contribution::create()
-      ->setCheckPermissions(FALSE)
-      ->addValue('contact_id', $this->contacts[0]['id'])
-      ->addValue('financial_type_id', 1)
-      ->addValue('total_amount', 100)
-      ->execute()[0]['id'] ?? 0;
-    $this->assertGreaterThan(0, $contributionID);
-
-    // Check for declarations.
-    $declarations = CRM_Civigiftaid_Declaration::getAllDeclarations($this->contacts[0]['id']);
-    $this->assertEquals([], $declarations);
-
-    /*
-   * @param array  $newParams    - fields to store in declaration:
-   *               - entity_id:  the Individual for whom we will create/update declaration
-   *               - eligible_for_gift_aid: 3=Yes+past 4 years,1=Yes,0=No
-   *               - start_date: start date of declaration (in ISO date format)
-   *               - end_date:   end date of declaration (in ISO date format)
-   *               */
-
-  }
-  /**
-   */
   public function testDeclarationUpdateFirstDeclarationEver() {
 
     // First, where there is no declaration.
-    $this->setupFixture1();
     $session = CRM_Core_Session::singleton();
     $session->set('postProcessTitle', 'testDeclarationUpdate', E::LONG_NAME);
 
@@ -204,6 +170,183 @@ class CRM_Civigiftaid_DeclarationTest extends \PHPUnit\Framework\TestCase implem
    *               - end_date:   end date of declaration (in ISO date format)
    *               */
 
+  }
+  /**
+   * Test logic.
+   *
+   *
+   * @dataProvider logicTestProvider
+   *
+   */
+  public function testSetDeclarationLogic($description, $sequence, $expectations) {
+
+    $session = CRM_Core_Session::singleton();
+    $session->set('postProcessTitle', 'testDeclarationUpdate', E::LONG_NAME);
+    $entityIdParam = ['entity_id' => $this->contacts[0]['id']];
+    $declarationsToDelete = [];
+    $testDescription = "Test set: $description";
+
+    // Simulate the sequence.
+    foreach ($sequence as $declaration) {
+      // Clear static caches.
+      unset(Civi::$statics[E::LONG_NAME]); //['updatedDeclarationAmount']);
+      unset(Civi::$statics['CRM_Civigiftaid_Declaration']);
+      // Fix annoying date format thing.
+      foreach (['start_date', 'end_date'] as $_) {
+        if (!empty($declaration[$_])) {
+          $declaration[$_] = preg_replace('/[^0-9]/', '', $declaration[$_]);
+        }
+      }
+      CRM_Civigiftaid_Declaration::setDeclaration($declaration + $entityIdParam);
+    }
+
+    // Test expectations.
+
+    // Check for declarations.
+    $declarations = CRM_Civigiftaid_Declaration::getAllDeclarations($this->contacts[0]['id']);
+    $this->assertInternalType('array', $declarations, $testDescription);
+    $this->assertCount(count($expectations), $declarations, $testDescription);
+
+    if (!$expectations) {
+      // All is fine.
+      return;
+    }
+
+    $i = 0;
+    do {
+      $expectation = array_shift($expectations);
+      $declaration = array_shift($declarations);
+      $declarationsToDelete[] = $declaration['id'];
+      $i++;
+
+      foreach ($expectation as $key => $value) {
+        if (($key === 'start_date' || $key === 'end_date')
+          && !preg_match('/ 00:00:00$/', $value)) {
+          // We're comparing a full date stamp with seconds
+          // We need to allow some leeway here since the test data provider
+          // is sourced at the beginning, so allow 5 minutes.
+
+          $this->assertGreaterThanOrEqual($value, $declaration[$key] ?? '(MISSING)', "$testDescription Expect declr $i to have $key >= $value");
+          $this->assertLessThan(date('Y-m-d H:i:s', strtotime($value) + 60*5), $declaration[$key] ?? '(MISSING)', "$testDescription Expect declr $i to have $key no later than 5 mins after $value");
+        }
+        else {
+          // Simple comparison.
+          $this->assertEquals($value, $declaration[$key] ?? '(MISSING)', "$testDescription: Expect declr $i to have $key = $value");
+        }
+      }
+    } while ($expectations);
+
+    // End of test, clean up:
+
+    // Delete the declaration.
+    \Civi\Api4\CustomValue::delete('Gift_Aid_Declaration')
+      ->setCheckPermissions(FALSE)
+      ->addWhere('id', 'IN', $declarationsToDelete)
+      ->execute();
+
+  }
+  public function logicTestProvider() {
+    $no = CRM_Civigiftaid_Declaration::DECLARATION_IS_NO;
+    $yes = CRM_Civigiftaid_Declaration::DECLARATION_IS_YES;
+    $yesPast4 = CRM_Civigiftaid_Declaration::DECLARATION_IS_PAST_4_YEARS;
+    return [
+      [
+        'existing no, adding a yes',
+        [
+          ['start_date' => '2020-01-01 00:00:00', 'eligible_for_gift_aid' => $no],
+          ['start_date' => '2020-05-01 00:00:00', 'eligible_for_gift_aid' => $yes],
+        ],
+        [
+          ['start_date' => '2020-01-01 00:00:00', 'eligible_for_gift_aid' => $no, 'end_date' => '2020-05-01 00:00:00'],
+          ['start_date' => '2020-05-01 00:00:00', 'eligible_for_gift_aid' => $yes],
+        ]
+      ],
+
+      [
+        'existing no, adding a yes past 4',
+        [
+          ['start_date' => '2020-01-01 00:00:00', 'eligible_for_gift_aid' => $no],
+          ['start_date' => '2020-05-01 00:00:00', 'eligible_for_gift_aid' => $yesPast4],
+        ],
+        [
+          ['start_date' => '2020-01-01 00:00:00', 'eligible_for_gift_aid' => $no, 'end_date' => '2020-05-01 00:00:00'],
+          ['start_date' => '2020-05-01 00:00:00', 'eligible_for_gift_aid' => $yesPast4],
+        ]
+      ],
+
+      [
+        'existing no, adding a no',
+        [
+          ['start_date' => '2020-01-01 00:00:00', 'eligible_for_gift_aid' => $no],
+          ['start_date' => '2020-05-01 00:00:00', 'eligible_for_gift_aid' => $no],
+        ],
+        [
+          ['start_date' => '2020-01-01 00:00:00', 'eligible_for_gift_aid' => $no, 'end_date' => ''],
+        ]
+      ],
+
+      [
+        'existing yes, adding a no',
+        [
+          ['start_date' => '2020-01-01 00:00:00', 'eligible_for_gift_aid' => $yes],
+          ['start_date' => '2020-05-01 00:00:00', 'eligible_for_gift_aid' => $no],
+        ],
+        [
+          ['start_date' => '2020-01-01 00:00:00', 'eligible_for_gift_aid' => $yes, 'end_date' => '2020-05-01 00:00:00', 'reason_ended' => 'Contact Declined'],
+          ['start_date' => '2020-05-01 00:00:00', 'eligible_for_gift_aid' => $no, 'end_date' => ''],
+        ]
+      ],
+
+      [
+        'existing yes past 4, adding a no',
+        [
+          ['start_date' => '2020-01-01 00:00:00', 'eligible_for_gift_aid' => $yesPast4],
+          ['start_date' => '2020-05-01 00:00:00', 'eligible_for_gift_aid' => $no],
+        ],
+        [
+          ['start_date' => '2020-01-01 00:00:00', 'eligible_for_gift_aid' => $yesPast4, 'end_date' => '2020-05-01 00:00:00', 'reason_ended' => 'Contact Declined'],
+          ['start_date' => '2020-05-01 00:00:00', 'eligible_for_gift_aid' => $no, 'end_date' => ''],
+        ]
+      ],
+
+      [
+        'existing yes, adding a yes',
+        [
+          ['start_date' => '2020-01-01 00:00:00', 'eligible_for_gift_aid' => $yes],
+          ['start_date' => '2020-05-01 00:00:00', 'eligible_for_gift_aid' => $yes],
+        ],
+        [
+          ['start_date' => '2020-01-01 00:00:00', 'eligible_for_gift_aid' => $yes, 'end_date' => '', 'reason_ended' => ''],
+        ]
+      ],
+
+      [
+        'existing yes, adding a yes past 4, but existing declr is older than 4 years ago',
+        [
+          // This start date is definitely over 4 years ago!
+          ['start_date' => '2012-01-01', 'eligible_for_gift_aid' => $yes],
+          ['start_date' => '2020-05-01 00:00:00', 'eligible_for_gift_aid' => $yesPast4],
+        ],
+        [
+          // No change
+          ['start_date' => '2012-01-01 00:00:00', 'eligible_for_gift_aid' => $yes, 'end_date' => '', 'reason_ended' => ''],
+        ]
+      ],
+
+
+      [
+        'existing yes, adding a yes past 4, but existing declr is not older than 4 years ago',
+        [
+          // This start date needs to be relevant to actually NOW, since that's the way
+          // the code is written (@todo open issue on this).
+          ['start_date' => date('Y-m-d', strtotime('today - 1 year')), 'eligible_for_gift_aid' => $yes],
+          ['start_date' => '2020-05-01 00:00:00', 'eligible_for_gift_aid' => $yesPast4],
+        ],
+        [
+          ['start_date' => date('Y-m-d H:i:s'), 'eligible_for_gift_aid' => $yesPast4, 'end_date' => '', 'reason_ended' => ''],
+        ]
+      ],
+    ];
   }
   protected function dump() {
 

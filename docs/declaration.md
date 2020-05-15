@@ -53,8 +53,10 @@ A new declaration is setup with start date today and "Eligible for Gift Aid" set
 #### Existing "No" declaration
 
 If the new declaration is "Yes and past 4 years" or "Yes":
+
 1. The existing "No" declaration end date is set to the new declaration's start date (e.g. today).
-1. A new declaration is created with start date set to the new declaration's start date (e.g. today).
+
+2. A new declaration is created with start date set to the new declaration's start date (e.g. today).
 
 If the new declaration is "No" then no changes are made.
 
@@ -62,12 +64,14 @@ If the new declaration is "No" then no changes are made.
 
 If the new declaration is "No":
 
-1. The existing declaration end date is set to the new declaration's start date and its "Reason Ended" field is set to "Contact declined".
-1. A new declaration is created with start date set to the new declaration's start date and eligible = "No".
+1. The existing declaration end date is set to the new declaration's start date and its "Reason Ended" field is set to "Contact Declined".
+
+2. A new declaration is created with start date set to the new declaration's start date and eligible = "No".
 
 If the new declaration is "Yes and past 4 years" and the existing declaration is "Yes":
 
 1. If the start date of the existing declaration is greater than 4 years ago no changes are made.
-2. If the start date of the existing declaration is less than 4 years ago the start date is changed to the new declaration's start date and contributions in the past 4 years will become eligible for submitting to HMRC.
+
+2. If the start date of the existing declaration is less than 4 years ago the start date is changed today (*not* the new declaration's start date) and contributions in the past 4 years will become eligible for submitting to HMRC.
 
 If the new declaration is "Yes" and the existing declaration is "Yes" or "Yes and past 4 years" no changes are made. As the donor has previously stated "Yes and past 4 years" it is up to the donor to inform the organisation if that declaration was made in error.

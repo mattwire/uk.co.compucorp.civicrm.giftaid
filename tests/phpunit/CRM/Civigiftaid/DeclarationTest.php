@@ -132,25 +132,69 @@ class CRM_Civigiftaid_DeclarationTest extends \PHPUnit\Framework\TestCase implem
 
     // First, where there is no declaration.
     $this->setupFixture1();
-
     $session = CRM_Core_Session::singleton();
-    // Set not uk
-    $session->set('uktaxpayer', 1, E::LONG_NAME);
     $session->set('postProcessTitle', 'testDeclarationUpdate', E::LONG_NAME);
-    // Create the contribution which should trigger storing a declaration.
 
-    // Create (eligible) contribution
-    $contributionID = \Civi\Api4\Contribution::create()
-      ->setCheckPermissions(FALSE)
-      ->addValue('contact_id', $this->contacts[0]['id'])
-      ->addValue('financial_type_id', 1)
-      ->addValue('total_amount', 100)
-      ->execute()[0]['id'] ?? 0;
-    $this->assertGreaterThan(0, $contributionID);
+    foreach ([
+      CRM_Civigiftaid_Declaration::DECLARATION_IS_YES => 'Yes',
+      CRM_Civigiftaid_Declaration::DECLARATION_IS_NO => 'No',
+      CRM_Civigiftaid_Declaration::DECLARATION_IS_PAST_4_YEARS => 'Yes and past 4',
+    ] as $type=>$assertionContext) {
 
-    // Check for declarations.
-    $declarations = CRM_Civigiftaid_Declaration::getAllDeclarations($this->contacts[0]['id']);
-    $this->assertEquals([], $declarations);
+      $session->set('uktaxpayer', $type, E::LONG_NAME);
+      $assertionContext = "During '$assertionContext' declaration test round";
+      // Clear static cahces.
+      unset(Civi::$statics[E::LONG_NAME]); //['updatedDeclarationAmount']);
+      unset(Civi::$statics['CRM_Civigiftaid_Declaration']);
+
+      // Create the contribution which should trigger storing a declaration.
+
+      // Create (eligible) contribution
+      $contributionID = \Civi\Api4\Contribution::create()
+        ->setCheckPermissions(FALSE)
+        ->addValue('contact_id', $this->contacts[0]['id'])
+        ->addValue('financial_type_id', 1)
+        ->addValue('total_amount', 100)
+        ->execute()[0]['id'] ?? 0;
+      $this->assertGreaterThan(0, $contributionID, $assertionContext);
+
+      // Check for declarations.
+      $declarations = CRM_Civigiftaid_Declaration::getAllDeclarations($this->contacts[0]['id']);
+      $this->assertInternalType('array', $declarations, $assertionContext);
+
+      // Special case: a No declaration does not get created.
+      if ($type === CRM_Civigiftaid_Declaration::DECLARATION_IS_NO) {
+        $this->assertCount(0, $declarations, $assertionContext);
+        continue;
+      }
+
+      $this->assertCount(1, $declarations, $assertionContext);
+      $decl = $declarations[0];
+      $this->assertEquals($this->contacts[0]['id'], $decl['entity_id'], $assertionContext);
+      $this->assertEquals($type, $decl['eligible_for_gift_aid'], $assertionContext);
+
+      // Check that it was created in the last 2 seconds.
+      $timeDiff = time() - strtotime($decl['start_date']);
+      $this->assertGreaterThanOrEqual(0, $timeDiff, $assertionContext);
+      $this->assertLessThan(2, $timeDiff, $assertionContext);
+      $this->assertEmpty($decl['end_date'], $assertionContext);
+      $this->assertEmpty($decl['notes'], $assertionContext);
+      $this->assertEquals('testDeclarationUpdate', $decl['source'], $assertionContext);
+
+      // End of test, clean up:
+
+      // Delete the contribution
+      \Civi\Api4\Contribution::delete()
+        ->setCheckPermissions(FALSE)
+        ->addWhere('id', '=', $contributionID)
+        ->execute();
+
+      // Delete the declaration.
+      \Civi\Api4\CustomValue::delete('Gift_Aid_Declaration')
+        ->setCheckPermissions(FALSE)
+        ->addWhere('id', '=', $decl['id'])
+        ->execute();
+    }
 
     /*
    * @param array  $newParams    - fields to store in declaration:

@@ -680,6 +680,7 @@ class CRM_Civigiftaid_Utils_Contribution {
       // Contribution has 0 eligible amount.
       return FALSE;
     }
+    // @todo fix this code it does nothing.
     $isEligible = $contribution[CRM_Civigiftaid_Utils::getCustomByName('Eligible_for_Gift_Aid', 'Gift_Aid')];
     if (!empty($isEligible) && ($isEligible == 0)) {
       // Contribution marked as not eligible

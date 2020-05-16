@@ -41,10 +41,6 @@ class CRM_Civigiftaid_SetContributionGiftAidEligibility {
   }
 
   public static function runCallback($event) {
-    if (isset(\Civi::$statics[__CLASS__]['runCallback'])) {
-      return;
-    }
-    \Civi::$statics[__CLASS__]['runCallback'] = TRUE;
     if (self::setGiftAidEligibilityStatus($event->id, $event->action)) {
       $event->object->find();
       if (!CRM_Civigiftaid_Declaration::getDeclaration($event->object->contact_id)) {

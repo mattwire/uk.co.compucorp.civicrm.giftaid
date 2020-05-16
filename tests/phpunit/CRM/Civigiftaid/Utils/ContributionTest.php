@@ -216,7 +216,9 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
         'test mixed Line Items Event Fee when main fin type is eligible',
         [ 'globally_enabled' => 0, 'financial_types_enabled'  => '1' ],
         [
-          'financial_type_id' => 1, //xxx why do we need to set this here?
+          // Seting financial_type_id here makes no sense but we have to do it,
+          // see https://lab.civicrm.org/dev/core/-/issues/1761
+          'financial_type_id' => 1,
           'line_items' => [
             [
               'params' => [],
@@ -251,6 +253,340 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
         ],
         [ 'eligibility' => 1, 'eligible_amount' => 20, 'ga_worth' => 5 ]
       ],
+    ];
+  }
+  /**
+   * Test contribution eligibility is calculated for multiple changes.
+   *
+   * @see Issue 26
+   *
+   */
+  public function testContributionEligibilityCalcsForMultipleCalls() {
+
+    $this->setupFixture1();
+
+    // Create contribution with order api
+    // Merge in common fields:
+    $orderCreateDefaults = [
+      'contact_id'             => $this->contacts[0]['id'],
+      'contribution_status_id' => 'Pending',
+      'financial_type_id'      => 1,
+    ];
+
+    // Call twice
+    $contributionIDs = [];
+    foreach ([100, 200] as $amount) {
+      $assertionContext = "Pass for amount $amount:";
+      $orderCreateParams = [ 'total_amount' => $amount ] + $orderCreateDefaults;
+      $contributionID = civicrm_api3('Order', 'create', $orderCreateParams)['id'] ?? NULL;
+      $contributionIDs[] = $contributionID;
+      $this->assertGreaterThan(0, $contributionID, $assertionContext);
+
+      // Re-fetch the contribution details.
+      $contribution = \Civi\Api4\Contribution::get()
+        ->setCheckPermissions(FALSE)
+        ->addSelect('Gift_Aid.Eligible_for_Gift_Aid', 'Gift_Aid.Amount', 'Gift_Aid.Gift_Aid_Amount', 'Gift_Aid.Batch_Name')
+        ->addWhere('id', '=', $contributionID)
+        ->execute()->first();
+
+      $this->assertEquals(1, $contribution['Gift_Aid.Eligible_for_Gift_Aid'] ?? NULL, $assertionContext);
+      $this->assertEquals($amount, $contribution['Gift_Aid.Amount'] ?? NULL, $assertionContext);
+      $this->assertEquals($amount/4, $contribution['Gift_Aid.Gift_Aid_Amount'] ?? NULL, $assertionContext);
+      $this->assertEquals('', $contribution['Gift_Aid.Batch_Name'] ?? NULL, $assertionContext);
+    }
+
+    // Delete contributions
+    \Civi\Api4\Contribution::delete()
+      ->addWhere('id', 'IN', $contributionIDs)
+      ->setCheckPermissions(FALSE)
+      ->execute();
+  }
+  /**
+   * Test validateContributionToBatch.
+   *
+   */
+  public function testValidateContributionToBatch() {
+
+      //CRM_Civigiftaid_Utils_Contribution::validateContributionToBatch($contributionIds);
+
+  }
+  /**
+   * Test isContributionEligible.
+   *
+   * This is the main logic.
+   *
+   * @dataProvider isContributionEligibleCases
+   *
+   */
+  public function testIsContributionEligible($description, $declarations, $contributions) {
+    $this->setupFixture2();
+
+    // Clear static caches.
+    unset(Civi::$statics[E::LONG_NAME]); //['updatedDeclarationAmount']);
+    unset(Civi::$statics['CRM_Civigiftaid_Declaration']);
+
+
+    if ($declarations) {
+      \Civi\Api4\CustomValue::save('Gift_Aid_Declaration')
+        ->setCheckPermissions(FALSE)
+        ->addDefault('entity_id', $this->contacts[0]['id'])
+        ->addDefault('Address', 'Somewhere')
+        ->addDefault('Post_Code', 'SW1A 0AA')
+        ->addDefault('Source', 'test')
+        ->setRecords($declarations)
+        ->execute();
+    }
+
+    // create contribution(s)
+    $contributionIDs = [];
+    foreach ($contributions as $orderCreateParams) {
+      // Create contribution with order api
+      // Merge in common fields:
+      $orderCreateParams += [
+        'contact_id'             => $this->contacts[0]['id'],
+        'total_amount'           => 100,
+        'financial_type_id'      => 1,
+        'contribution_status_id' => 'Pending',
+      ];
+      $contributionID = civicrm_api3('Order', 'create', $orderCreateParams)['id'] ?? NULL;
+      $contributionIDs[] = $contributionID;
+    }
+    // Flip array so keys are contributionIDs and values are indexes that we can match to the input $contributions;
+    $contributionIDs = array_flip($contributionIDs);
+
+    // test contributions.
+    // Get all contributions from found IDs that are not already in a batch
+    $contributionParams = [
+      'id' => ['IN' => $contributionIDs],
+      'return' => [
+        'id',
+        'contact_id',
+        'contribution_status_id',
+        'receive_date',
+        CRM_Civigiftaid_Utils::getCustomByName('batch_name', 'Gift_Aid'),
+        CRM_Civigiftaid_Utils::getCustomByName('Eligible_for_Gift_Aid', 'Gift_Aid'),
+        CRM_Civigiftaid_Utils::getCustomByName('Gift_Aid_Amount', 'Gift_Aid'),
+        CRM_Civigiftaid_Utils::getCustomByName('Amount', 'Gift_Aid'),
+      ],
+      'options' => ['limit' => 0],
+    ];
+    $contributionsCreated = civicrm_api3('Contribution', 'get', $contributionParams)['values'];
+    foreach ($contributionsCreated as $contributionID => $contribution) {
+      $result = static::isContributionEligible($contribution);
+      $idx = $contributionIDs[$contributionID];
+      $this->assertEquals($contributions[$idx]['expectedEligibility'], $result,
+        "$description: Error in contribution #$idx."
+      );
+    }
+
+    // delete contributions.
+    \Civi\Api4\Contribution::delete()
+      ->addWhere('id', 'IN', array_keys($contributionIDs))
+      ->setCheckPermissions(FALSE)
+      ->execute();
+
+    // delete declarations
+    \Civi\Api4\CustomValue::delete('Gift_Aid_Declaration')
+      ->addWhere('entity_id', '=', $this->contacts[0]['id'])
+      ->execute();
+
+  }
+  /**
+   * Data provider for testIsContributionEligible
+   *
+   * @return Array
+   */
+  public function isContributionEligibleCases() {
+    $no = CRM_Civigiftaid_Declaration::DECLARATION_IS_NO;
+    $yes = CRM_Civigiftaid_Declaration::DECLARATION_IS_YES;
+    $yesPast4 = CRM_Civigiftaid_Declaration::DECLARATION_IS_PAST_4_YEARS;
+
+    return [
+      // Case #0
+      [
+        'Contribution on a person without declaration',
+        [],
+        [
+          [
+            'expectedEligibility' => FALSE,
+            'receive_date' => '2020-02-01 00:00:00',
+            [ 'line_items' => [
+                [ 'line_item' => [ [ 'line_total' => 100, 'financial_type_id' => 1, 'price_field_id' => 1, 'qty' =>1 ], ] ]
+            ] ]
+          ]
+        ]
+      ],
+
+      // Case #1
+      [
+        'Contribution on a person with a "no" declaration',
+        [
+          [ 'start_date' => '2020-02-01', 'eligible_for_gift_aid' => $no ]
+        ],
+        [
+          [
+            'expectedEligibility' => FALSE,
+            'receive_date' => '2020-02-01 00:00:00',
+            [ 'line_items' => [
+                [ 'line_item' => [ [ 'line_total' => 100, 'financial_type_id' => 1, 'price_field_id' => 1, 'qty' =>1 ], ] ]
+            ] ]
+          ]
+        ]
+      ],
+
+      // Case #2
+      [
+        'Contribution on a person with yes declaration',
+        [
+          [ 'start_date' => '2020-02-01', 'eligible_for_gift_aid' => $yes ]
+        ],
+        [
+          [
+            'expectedEligibility' => TRUE,
+            'receive_date' => '2020-02-01 00:00:00',
+            [ 'line_items' => [
+                [ 'line_item' => [ [ 'line_total' => 100, 'financial_type_id' => 1, 'price_field_id' => 1, 'qty' =>1 ], ] ]
+            ] ]
+          ]
+        ]
+      ],
+
+      // Case #3
+      [
+        'Contribution on a person with yes past 4 years declaration',
+        [
+          [ 'start_date' => '2020-02-01', 'eligible_for_gift_aid' => $yesPast4 ]
+        ],
+        [
+          [
+            'expectedEligibility' => TRUE,
+            'receive_date' => '2020-02-01 00:00:00',
+            [ 'line_items' => [
+                [ 'line_item' => [ [ 'line_total' => 100, 'financial_type_id' => 1, 'price_field_id' => 1, 'qty' =>1 ], ] ]
+            ] ]
+          ]
+        ]
+      ],
+
+      // Case #4
+      [
+        'Contribution on a person with yes past 4 years declaration, contrib is before date decl. given.',
+        [
+          [ 'start_date' => '2020-02-01', 'eligible_for_gift_aid' => $yesPast4 ]
+        ],
+        [
+          [
+            'expectedEligibility' => TRUE,
+            'receive_date' => '2018-02-01 00:00:00',
+            [ 'line_items' => [
+                [ 'line_item' => [ [ 'line_total' => 100, 'financial_type_id' => 1, 'price_field_id' => 1, 'qty' =>1 ], ] ]
+            ] ]
+          ]
+        ]
+      ],
+
+      // Case #5
+      [
+        'Contribution on a person with yes past 4 years declaration, contrib is too old',
+        [
+          [ 'start_date' => '2020-02-01', 'eligible_for_gift_aid' => $yesPast4 ]
+        ],
+        [
+          [
+            'expectedEligibility' => FALSE,
+            'receive_date' => '2015-02-01 00:00:00',
+            [ 'line_items' => [
+                [ 'line_item' => [ [ 'line_total' => 100, 'financial_type_id' => 1, 'price_field_id' => 1, 'qty' =>1 ], ] ]
+            ] ]
+          ]
+        ]
+      ],
+
+      // Case #6
+      [
+        'Contribution before yes declaration',
+        [
+          [ 'start_date' => '2020-02-01', 'eligible_for_gift_aid' => $yes]
+        ],
+        [
+          [
+            'expectedEligibility' => FALSE,
+            'receive_date' => '2020-01-01 00:00:00',
+            [ 'line_items' => [
+                [ 'line_item' => [ [ 'line_total' => 100, 'financial_type_id' => 1, 'price_field_id' => 1, 'qty' =>1 ], ] ]
+            ] ]
+          ]
+        ]
+      ],
+
+      // Case #7
+      [
+        'Contribution after end date of a yes declaration',
+        [
+          [ 'start_date' => '2019-01-01', 'end_date' => '2019-12-01', 'eligible_for_gift_aid' => $yes]
+        ],
+        [
+          [
+            'expectedEligibility' => FALSE,
+            'receive_date' => '2020-01-01 00:00:00',
+            [ 'line_items' => [
+                [ 'line_item' => [ [ 'line_total' => 100, 'financial_type_id' => 1, 'price_field_id' => 1, 'qty' =>1 ], ] ]
+            ] ]
+          ]
+        ]
+      ],
+
+      // Case #8
+      [
+        'Contribution during No period after end date of a yes declaration',
+        [
+          [ 'start_date' => '2019-01-01', 'end_date' => '2019-12-01', 'eligible_for_gift_aid' => $yes],
+          [ 'start_date' => '2019-12-01', 'end_date' => '', 'eligible_for_gift_aid' => $no]
+        ],
+        [
+          [
+            'expectedEligibility' => FALSE,
+            'receive_date' => '2020-01-01 00:00:00',
+            [ 'line_items' => [
+                [ 'line_item' => [ [ 'line_total' => 100, 'financial_type_id' => 1, 'price_field_id' => 1, 'qty' =>1 ], ] ]
+            ] ]
+          ]
+        ]
+      ],
+
+      // Case #9
+      [
+        'Contribution is not of eligible type, but is during Yes period',
+        [
+          [ 'start_date' => '2019-01-01', 'end_date' => '', 'eligible_for_gift_aid' => $yes],
+        ],
+        [
+          [
+            'expectedEligibility' => FALSE,
+            'receive_date' => '2020-01-01 00:00:00',
+            'financial_type_id' => 1, // Donation, but line item contradicts.
+            [ 'line_items' => [
+                [ 'line_item' => [ [ 'line_total' => 100, 'financial_type_id' => 4, 'price_field_id' => 1, 'qty' =>1 ], ] ]
+            ] ]
+          ]
+        ]
+      ],
+
+      // Case #10
+      [
+        'Contribution with zero value',
+        [],
+        [
+          [
+            'expectedEligibility' => FALSE,
+            'receive_date' => '2020-02-01 00:00:00',
+            [ 'total_amount' => 0, 'line_items' => [
+                [ 'line_item' => [ [ 'line_total' => 0, 'financial_type_id' => 1, 'price_field_id' => 1, 'qty' =>1 ], ] ]
+            ] ]
+          ]
+        ]
+      ],
+
     ];
   }
   protected function dump() {
@@ -302,24 +638,7 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
    */
   protected function setupFixture1() {
 
-    $r = civicrm_api3('FinancialType', 'get', []);
-    $this->assertEquals('Donation', $r['values'][1]['name'], "Test assumes fin type 1 is donation but it is not.");
-    $this->assertEquals('Event Fee', $r['values'][4]['name'], "Test assumes fin type 4 is event fee but it is not.");
-
-    // Mark Donation as an eligible type, (and event fee as not), and globally eligible for now.
-    //$financialTypesAvailable = (Array) CRM_Civigiftaid_Settings::get('financial_types_enabled');
-    CRM_Civigiftaid_Settings::save([
-      'globally_enabled' => 1,
-      'financial_types_enabled' => [1], // Just donations.
-    ]);
-
-    // Create a contact.
-    $result = \Civi\Api4\Contact::create()
-      ->setCheckPermissions(FALSE)
-      ->addValue('contact_type', 'Individual')
-      ->addValue('display_name', 'Test 123')
-      ->execute()[0];
-    $this->contacts[] = $result;
+    $this->setupFixture2();
     $contactID = $this->contacts[0]['id'];
 
     // Create a declaration for this contact.
@@ -333,8 +652,31 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
       ->addValue('Source', 'test 1')
       ->execute();
 
-    // Set globally enabled.
-    Civi::settings()->set('civigiftaid_globally_enabled', 1);
   }
 
+  /**
+   * Create a contact and check some assumptions.
+   */
+  protected function setupFixture2() {
+
+    $r = civicrm_api3('FinancialType', 'get', []);
+    $this->assertEquals('Donation', $r['values'][1]['name'], "Test assumes fin type 1 is donation but it is not.");
+    $this->assertEquals('Event Fee', $r['values'][4]['name'], "Test assumes fin type 4 is event fee but it is not.");
+
+    // Mark Donation as an eligible type, (and event fee as not), and globally eligible for now.
+    //$financialTypesAvailable = (Array) CRM_Civigiftaid_Settings::get('financial_types_enabled');
+    CRM_Civigiftaid_Settings::save([
+      'globally_enabled' => 1,
+      'financial_types_enabled' => '1', // Just donations.
+    ]);
+
+    // Create a contact.
+    $result = \Civi\Api4\Contact::create()
+      ->setCheckPermissions(FALSE)
+      ->addValue('contact_type', 'Individual')
+      ->addValue('display_name', 'Test 123')
+      ->execute()[0];
+    $this->contacts[] = $result;
+
+  }
 }

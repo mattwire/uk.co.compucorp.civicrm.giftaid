@@ -59,6 +59,7 @@ class CRM_Civigiftaid_Declaration {
       'start_date' => CRM_Utils_Date::isoToMysql($contribution['receive_date']),
       'address' => $addressDetails,
       'post_code' => $postCode,
+      'eligible_for_gift_aid' => $contactGiftAidEligibleStatus,
     ];
     self::setDeclaration($declarationParams);
   }

@@ -243,7 +243,8 @@ function civigiftaid_civicrm_postProcess($formName, &$form) {
 }
 
 /**
- * If a contribution is created/edited create/edit the slave contributions
+ * If a contribution is created/edited create/edit the declaration.
+ *
  * @param $op
  * @param $objectName
  * @param $objectId

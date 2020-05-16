@@ -19,10 +19,7 @@ digraph A {
   runCallback [label="runCallback"]
   schedule->runCallback
 
-  runCallback->callbackDoneBefore
-  callbackDoneBefore [label="Done once this runtime\n(static var)?", shape=diamond, color=red]
-    callbackDoneBefore:s->setGiftAidEligibilityStatus [taillabel="No"]
-    callbackDoneBefore:e->end [taillabel="Yes", weight=0]
+  runCallback->setGiftAidEligibilityStatus
 
   setGiftAidEligibilityStatus -> qAlreadySet
   qAlreadySet [label="contrib eligibility already\nset to yes or no?", shape=diamond]

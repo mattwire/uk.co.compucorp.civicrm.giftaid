@@ -216,7 +216,9 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
         'test mixed Line Items Event Fee when main fin type is eligible',
         [ 'globally_enabled' => 0, 'financial_types_enabled'  => '1' ],
         [
-          'financial_type_id' => 1, //xxx why do we need to set this here?
+          // Seting financial_type_id here makes no sense but we have to do it,
+          // see https://lab.civicrm.org/dev/core/-/issues/1761
+          'financial_type_id' => 1,
           'line_items' => [
             [
               'params' => [],
@@ -371,7 +373,7 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
 
       // Case #1
       [
-        'Contribution on a person with no declaration',
+        'Contribution on a person with a "no" declaration',
         [
           [ 'start_date' => '2020-02-01', 'eligible_for_gift_aid' => $no ]
         ],
@@ -524,6 +526,20 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
         ]
       ],
 
+      // Case #10
+      [
+        'Contribution with zero value',
+        [],
+        [
+          [
+            'expectedEligibility' => FALSE,
+            'receive_date' => '2020-02-01 00:00:00',
+            [ 'total_amount' => 0, 'line_items' => [
+                [ 'line_item' => [ [ 'line_total' => 0, 'financial_type_id' => 1, 'price_field_id' => 1, 'qty' =>1 ], ] ]
+            ] ]
+          ]
+        ]
+      ],
 
     ];
   }

@@ -256,6 +256,50 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
     ];
   }
   /**
+   * Test contribution eligibility is calculated for multiple changes.
+   *
+   */
+  public function testContributionEligibilityCalcsForMultipleCalls() {
+
+    $this->setupFixture1();
+
+    // Create contribution with order api
+    // Merge in common fields:
+    $orderCreateDefaults = [
+      'contact_id'             => $this->contacts[0]['id'],
+      'contribution_status_id' => 'Pending',
+      'financial_type_id'      => 1,
+    ];
+
+    // Call twice
+    $contributionIDs = [];
+    foreach ([100, 200] as $amount) {
+      $assertionContext = "Pass for amount $amount:";
+      $orderCreateParams = [ 'total_amount' => $amount ] + $orderCreateDefaults;
+      $contributionID = civicrm_api3('Order', 'create', $orderCreateParams)['id'] ?? NULL;
+      $contributionIDs[] = $contributionID;
+      $this->assertGreaterThan(0, $contributionID, $assertionContext);
+
+      // Re-fetch the contribution details.
+      $contribution = \Civi\Api4\Contribution::get()
+        ->setCheckPermissions(FALSE)
+        ->addSelect('Gift_Aid.Eligible_for_Gift_Aid', 'Gift_Aid.Amount', 'Gift_Aid.Gift_Aid_Amount', 'Gift_Aid.Batch_Name')
+        ->addWhere('id', '=', $contributionID)
+        ->execute()->first();
+
+      $this->assertEquals(1, $contribution['Gift_Aid.Eligible_for_Gift_Aid'] ?? NULL, $assertionContext);
+      $this->assertEquals($amount, $contribution['Gift_Aid.Amount'] ?? NULL, $assertionContext);
+      $this->assertEquals($amount/4, $contribution['Gift_Aid.Gift_Aid_Amount'] ?? NULL, $assertionContext);
+      $this->assertEquals('', $contribution['Gift_Aid.Batch_Name'] ?? NULL, $assertionContext);
+    }
+
+    // Delete contributions
+    \Civi\Api4\Contribution::delete()
+      ->addWhere('id', 'IN', $contributionIDs)
+      ->setCheckPermissions(FALSE)
+      ->execute();
+  }
+  /**
    * Test validateContributionToBatch.
    *
    */

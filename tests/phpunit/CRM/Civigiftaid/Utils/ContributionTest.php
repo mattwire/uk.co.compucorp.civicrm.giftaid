@@ -258,6 +258,8 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
   /**
    * Test contribution eligibility is calculated for multiple changes.
    *
+   * @see Issue 26
+   *
    */
   public function testContributionEligibilityCalcsForMultipleCalls() {
 

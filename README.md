@@ -1,3 +1,5 @@
+# Moved to https://lab.civicrm.org/extensions/ukgiftaid
+
 # UK GiftAid Extension for CiviCRM (MJW version)
 
 This extension adds a profile, custom fields and code for managing the UK Gift Aid scheme.

@@ -1,5 +1,6 @@
 site_name: UK Gift Aid
-repo_url: https://github.com/mattwire/uk.co.compucorp.civicrm.giftaid
+repo_url: https://lab.civicrm.org/extensions/ukgiftaid
+
 theme:
   name: material
 markdown_extensions:

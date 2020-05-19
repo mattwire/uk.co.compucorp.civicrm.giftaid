@@ -36,11 +36,14 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
     // See: https://docs.civicrm.org/dev/en/latest/testing/phpunit/#civitest
 
     // Set to TRUE to force a reset - but your tests will take forever.
-    $forceResetDatabase = FALSE;
+    static $forceResetDatabase = FALSE;
 
-    return \Civi\Test::headless()
+    $return = \Civi\Test::headless()
       ->installMe(__DIR__)
       ->apply($forceResetDatabase);
+
+    $forceResetDatabase = FALSE;
+    return $return;
   }
 
   public function setUp() {
@@ -300,15 +303,6 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
       ->addWhere('id', 'IN', $contributionIDs)
       ->setCheckPermissions(FALSE)
       ->execute();
-  }
-  /**
-   * Test validateContributionToBatch.
-   *
-   */
-  public function testValidateContributionToBatch() {
-
-      //CRM_Civigiftaid_Utils_Contribution::validateContributionToBatch($contributionIds);
-
   }
   /**
    * Test isContributionEligible.

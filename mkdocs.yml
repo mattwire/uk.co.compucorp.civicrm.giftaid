@@ -17,13 +17,13 @@ markdown_extensions:
   - pymdownx.mark
 
 nav:
-- Release Notes: releasenotes.md
-- Introduction: index.md
-- Setup and Configuration: setup.md
-- The Gift Aid Declaration: declaration.md
-- Contributions and Eligibility: contributions.md
-- Creating and managing your batch: batches.md
-- Submitting to HMRC / Reporting: submission.md
-- Managing the basic rate of Tax: tax.md
-- API Functions: api.md
+- "Release Notes": releasenotes.md
+- "Introduction": index.md
+- "Setup and Configuration": setup.md
+- "The Gift Aid Declaration": declaration.md
+- "Contributions and Eligibility": contributions.md
+- "Creating and managing your batch": batches.md
+- "Submitting to HMRC / Reporting": submission.md
+- "Managing the basic rate of Tax": tax.md
+- "API Functions": api.md
 

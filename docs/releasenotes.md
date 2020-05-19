@@ -24,17 +24,17 @@
 
 * Rework "Remove from Batch" to improve performance and ensure that what is shown on the screen is what is added to the batch.
 * Rework "Add to Batch" task to improve performance and ensure that what is shown on the screen is what is added to the batch.
-* Update GiftAid.updateeligiblecontributions API and [document](../api.md).
+* Update GiftAid.updateeligiblecontributions API and [document](api.md).
 
 ## Release 3.3.5
 
 * Update and refactor how we create/update declarations.
-* Added [documentation for declarations](../declaration.md) to explain how the declarations are created/updated and what the fields mean.
+* Added [documentation for declarations](declaration.md) to explain how the declarations are created/updated and what the fields mean.
 
 ## Release 3.3.4
 
 * Fix issues with setting "Eligible for gift aid" on contributions.
-* Added [documentation for contributions](../contributions.md) to explain how the gift aid fields on contributions work.
+* Added [documentation for contributions](contributions.md) to explain how the gift aid fields on contributions work.
 
 ## Release 3.3.3
 

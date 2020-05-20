@@ -39,12 +39,7 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
    */
   public function install() {
 
-    $this->setOptionGroups();
-    $this->enableOptionGroups(1);
-    $this->ensureCustomGroups();
-    $this->ensureCustomFields();
-    $this->setDefaultSettings();
-    $this->ensureProfiles();
+    $this->ensureDataStructures();
 
     // Nb. this is kept to preserve previous behaviour, it should not be needed.
     // Import existing batches.
@@ -57,7 +52,25 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
 
   }
   /**
+   * Safely repeatable function to ensure all the data structures we need
+   * exist.
+   */
+  public function ensureDataStructures() {
+
+    // Note most of these depend on the others having been called during
+    // runtime, so the order is important.
+    $this->setOptionGroups();
+    $this->enableOptionGroups(1);
+    $this->ensureCustomGroups();
+    $this->ensureCustomFields();
+    $this->setDefaultSettings();
+    $this->ensureProfiles();
+
+  }
+  /**
    * Ensure we have the custom groups defined.
+   *
+   *
    */
   protected function ensureCustomGroups() {
     $this->declarationCustomGroupId = $this->findOrCreate('CustomGroup',
@@ -100,6 +113,8 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
   }
   /**
    * Ensure we have the custom fields defined for declaration
+   *
+   * Note: requires ensureCustomGroups() to have run.
    */
   protected function ensureCustomFields() {
     foreach ($this->getCustomFields() as $name => $details) {
@@ -125,7 +140,11 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
       $additionalCreateParams = $details;
 
       // Ensure field exists.
-      $this->customFieldNamesToIds[$details['name']] = $this->findOrCreate('CustomField', $findParams, $requiredParams, $additionalCreateParams)['id'];
+      // Note: we store its ID so we can look it up easily later.
+      // We cannot simply store the name though because sadly we have used
+      // Eligible_for_Gift_Aid as a custom field name twice in two different
+      // custom groups. Doh.
+      $this->customFieldNamesToIds["$details[custom_group_id]--$details[name]"] = $this->findOrCreate('CustomField', $findParams, $requiredParams, $additionalCreateParams)['id'];
     }
   }
   /**
@@ -151,7 +170,7 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
     $this->findOrCreate('UFField',
       [
         'uf_group_id' => $profileId,
-        'field_name' => 'custom_' . $this->customFieldNamesToIds['Eligible_for_Gift_Aid'],
+        'field_name' => 'custom_' . $this->customFieldNamesToIds["$this->declarationCustomGroupId--Eligible_for_Gift_Aid"],
       ],
       [
         'is_active' => 1,
@@ -404,7 +423,12 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
           // Need to correct it/update it.
           $corrections['id'] = $thing['id'];
           civicrm_api3($entity, 'create', $corrections);
-          return civicrm_api3($entity, 'getsingle', ['id' => $thing['id']])['values'];
+          // Reload
+          return civicrm_api3($entity, 'getsingle', ['id' => $thing['id']]);
+        }
+        else {
+          // Wanted one, found it, no corrections.
+          return $thing;
         }
       }
       else {
@@ -541,7 +565,16 @@ class CRM_Civigiftaid_Upgrader extends CRM_Civigiftaid_Upgrader_Base {
     return TRUE;
   }
 
+  /**
+   * @return array
+   */
   private function getCustomFields() {
+    if (empty($this->declarationCustomGroupId)) {
+      throw new \RuntimeException("CRM_Civigiftaid_Upgrader::getCustomFields called before declarationCustomGroupId defined.");
+    }
+    if (empty($this->contributionGiftaidCustomGroupId)) {
+      throw new \RuntimeException("CRM_Civigiftaid_Upgrader::getCustomFields called before contributionGiftaidCustomGroupId defined.");
+    }
 
     $customFields = [
       // For contacts' declarations...

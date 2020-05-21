@@ -3,7 +3,7 @@
 ## GiftAid
 
 ### Update Eligible Contributions
-[GiftAid.updateeligiblecontributions](../api.md) - API to set "Eligible for Gift Aid" on all contributions where
+GiftAid.updateeligiblecontributions - API to set "Eligible for Gift Aid" on all contributions where
 it was not previously set.
 
 This allows to to "fix" any contributions that were created with an older version of the extension.

@@ -36,11 +36,14 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
     // See: https://docs.civicrm.org/dev/en/latest/testing/phpunit/#civitest
 
     // Set to TRUE to force a reset - but your tests will take forever.
-    $forceResetDatabase = FALSE;
+    static $forceResetDatabase = FALSE;
 
-    return \Civi\Test::headless()
+    $return = \Civi\Test::headless()
       ->installMe(__DIR__)
       ->apply($forceResetDatabase);
+
+    $forceResetDatabase = FALSE;
+    return $return;
   }
 
   public function setUp() {
@@ -302,15 +305,6 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
       ->execute();
   }
   /**
-   * Test validateContributionToBatch.
-   *
-   */
-  public function testValidateContributionToBatch() {
-
-      //CRM_Civigiftaid_Utils_Contribution::validateContributionToBatch($contributionIds);
-
-  }
-  /**
    * Test isContributionEligible.
    *
    * This is the main logic.
@@ -394,6 +388,21 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
   /**
    * Data provider for testIsContributionEligible
    *
+   * Each case contains:
+   * - A description
+   *
+   * - An array of declarations (may be empty) to create. Note that these are
+   * created with the API which means they are done without the setDeclaration
+   * logic.
+   *
+   * - An array of contributions to create (with Order.create). Some defaults
+   * are added to this, and it also has a key called expectedEligibility which
+   * is a bool.
+   *
+   * The test creates the declarations, creates the orders, reloads the orders
+   * and calls isContributionEligible on each contribution, testing against
+   * expectedEligibility.
+   *
    * @return Array
    */
   public function isContributionEligibleCases() {
@@ -402,6 +411,7 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
     $yesPast4 = CRM_Civigiftaid_Declaration::DECLARATION_IS_PAST_4_YEARS;
 
     return [
+
       // Case #0
       [
         'Contribution on a person without declaration',
@@ -587,6 +597,46 @@ class CRM_Civigiftaid_Utils_ContributionTest extends \PHPUnit\Framework\TestCase
         ]
       ],
 
+      // Case #11
+      [
+        'Check that a No declaration can be overruled by a later yes past 4 - contribution on no date',
+        [
+          // This 'no' decl has been completely overwritten by a later Yes + 4 one.
+          // Note: 'reason_ended' is very much focused on recording why a Yes dec. ended; it does not make sense for
+          // why a No declaration ended given the current options (xxx 'declined')
+          [ 'start_date' => '2020-01-01', 'end_date' => '2020-01-01', 'eligible_for_gift_aid' => $no ],
+          [ 'start_date' => '2020-02-22', 'eligible_for_gift_aid' => $yesPast4 ],
+        ],
+        [
+          [
+            'expectedEligibility' => TRUE,
+            'receive_date' => '2020-01-01 00:00:00',
+            [ 'total_amount' => 0, 'line_items' => [
+                [ 'line_item' => [ [ 'line_total' => 0, 'financial_type_id' => 1, 'price_field_id' => 1, 'qty' =>1 ], ] ]
+            ] ]
+          ]
+        ]
+      ],
+      // Case #12
+      [
+        'Check that a No declaration can be overruled by a later yes past 4 - contribution before No',
+        [
+          // This 'no' decl has been completely overwritten by a later Yes + 4 one.
+          // Note: 'reason_ended' is very much focused on recording why a Yes dec. ended; it does not make sense for
+          // why a No declaration ended given the current options (xxx 'declined')
+          [ 'start_date' => '2020-01-01', 'end_date' => '2020-01-01', 'eligible_for_gift_aid' => $no ],
+          [ 'start_date' => '2020-02-22', 'eligible_for_gift_aid' => $yesPast4 ],
+        ],
+        [
+          [
+            'expectedEligibility' => TRUE,
+            'receive_date' => '2019-01-01 00:00:00',
+            [ 'total_amount' => 0, 'line_items' => [
+                [ 'line_item' => [ [ 'line_total' => 0, 'financial_type_id' => 1, 'price_field_id' => 1, 'qty' =>1 ], ] ]
+            ] ]
+          ]
+        ]
+      ],
     ];
   }
   protected function dump() {

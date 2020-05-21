@@ -36,11 +36,15 @@ class CRM_Civigiftaid_DeclarationTest extends \PHPUnit\Framework\TestCase implem
     // See: https://docs.civicrm.org/dev/en/latest/testing/phpunit/#civitest
 
     // Set to TRUE to force a reset - but your tests will take forever.
-    $forceResetDatabase = FALSE;
+    static $forceResetDatabase = FALSE;
 
-    return \Civi\Test::headless()
+    $r = \Civi\Test::headless()
       ->installMe(__DIR__)
       ->apply($forceResetDatabase);
+
+    // At most do this once.
+    $forceResetDatabase = FALSE;
+    return $r;
   }
 
   public function setUp() {
@@ -262,6 +266,7 @@ class CRM_Civigiftaid_DeclarationTest extends \PHPUnit\Framework\TestCase implem
         ]
       ],
 
+      // This behaviour changed with resolving gitlab issue 1
       [
         'existing no, adding a yes past 4',
         [
@@ -273,7 +278,6 @@ class CRM_Civigiftaid_DeclarationTest extends \PHPUnit\Framework\TestCase implem
           ['start_date' => '2020-05-01 00:00:00', 'eligible_for_gift_aid' => $yesPast4],
         ]
       ],
-
       [
         'existing no, adding a no',
         [
